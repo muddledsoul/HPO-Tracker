@@ -181,11 +181,30 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .maxes .mh{grid-column:1/-1;font-size:12px;font-weight:800;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
 .maxes label{display:grid;grid-template-columns:1fr 76px;align-items:center;gap:6px;font-size:14px;font-weight:600}
 .maxes input{width:100%;padding:7px 6px;border:2px solid var(--line);border-radius:var(--r);background:#fff;font-size:17px;font-weight:700;text-align:center}
+
+.hlrow{display:grid;grid-template-columns:1fr 36px;gap:4px;align-items:stretch}
+.hlrow .hl{margin:3px 0}
+.info{border:2px solid var(--line);border-radius:var(--r);background:#fff;font-weight:800;color:var(--ink2);margin:3px 0;font-size:16px}
+.sheet{position:fixed;inset:0;background:rgba(24,35,32,.55);display:none;align-items:flex-end;z-index:50}
+.sheet.open{display:flex}
+.sh{background:var(--panel);width:100%;max-width:640px;margin:0 auto;border-radius:12px 12px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+.sh h3{margin:0 0 6px;font-size:24px;font-weight:800}
+.sh p{margin:0 0 14px;font-size:16px;line-height:1.35}
+.sh .btn.ghost{display:inline-flex;text-decoration:none;margin-right:6px}
+.gl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
+.gl b{font-size:16px} .gl span{grid-column:1;color:var(--ink2)} .gl a{grid-row:1/3;align-self:center;font-weight:800;color:var(--accent-ink);text-decoration:none}
+
+.oneRM{display:grid;grid-template-columns:1fr 96px;gap:2px 8px;align-items:center;background:#FDE7DA;border-radius:var(--r);padding:8px 10px;margin:2px 0 6px}
+.oneRM span{font-weight:800;font-size:14px;color:var(--accent-ink)}
+.oneRM input{width:100%;padding:8px 6px;border:2px solid var(--accent);border-radius:var(--r);background:#fff;font-size:18px;font-weight:800;text-align:center}
+.oneRM small{grid-column:1/-1;color:var(--ink2);font-size:12px}
+.maxes i{font-style:normal;font-size:11px;color:var(--accent-ink);font-weight:800}
 </style>
 </head>
 <body>
 <div class="gate" id="gate"><h1>HPO</h1><p>Enter password</p><form onsubmit="return unlock(event)"><input id="pw" type="password" autocomplete="current-password" autofocus><button type="submit">Unlock</button></form><div class="err" id="pwerr"></div></div>
 <div id="app"></div>
+<div class="sheet" id="sheet" onclick="if(event.target===this)this.classList.remove('open')"></div>
 <nav class="tabs" id="tabs"></nav>
 <div class="toast" id="toast"></div>
 <script src="horsemen.js"></script>
@@ -391,13 +410,13 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.12';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.14';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
   try{ const t=localStorage.getItem(KEY); if(t){ Object.assign(S,JSON.parse(t)); } localStorage.setItem(KEY+'-probe','1'); storageOK=true; }
   catch(e){ try{ const r=await window.storage.get(KEY,false); if(r&&r.value) Object.assign(S,JSON.parse(r.value)); storageOK=true; }catch(e2){ storageOK=false; } }
-  if(!S.h) S.h={days:{},m:1,d:1}; goNext(); S.tab='home';
+  if(!S.h) S.h={days:{},m:1,d:1}; if(S.h.maxes){ S.maxes=S.maxes||{}; for(const k in S.h.maxes) if(!S.maxes[k]) S.maxes[k]={v:S.h.maxes[k],src:'tested'}; delete S.h.maxes; } goNext(); S.tab='home';
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').then(reg=>{ reg.update(); reg.addEventListener('updatefound',()=>{ const nw=reg.installing; nw&&nw.addEventListener('statechange',()=>{ if(nw.state==='activated'&&!window.__reloaded){ window.__reloaded=1; toast('Updating…'); setTimeout(()=>location.reload(),600); } }); }); }); }catch(e){} }
   if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
   render();
@@ -516,11 +535,16 @@ function hBest(n){ const h=hHistory(n); if(!h.length) return null; const times=h
 /* ---- 1RM maxes & % calculations ---- */
 const H_LIFTS=[['clean squat & push press',['clean squat & push press','clean squat and push press']],['weighted pull up',['weighted pull up','weighted pull ups']],['squat clean',['squat clean','clean & squat','clean and squat','clean squat']],['power snatch',['power snatch']],['power clean',['power clean']],['push press',['push press']],['front squat',['front squat']],['back squat',['back squat','squat']],['bench press',['bench press','bench']],['deadlift',['dl','deadlift','dead lift','trap bar dl']],['press',['standing press','military press','standing military press','overhead press','strict press','press']],['jerk',['jerk from rack','power jerk','jerk']],['clean pull',['clean pull']],['good morning',['good morning']],['overhead squat',['ohs','overhead squat']],['thruster',['thruster']],['snatch',['snatch']],['clean',['clean']]];
 function hLift(line){ let t=line.toLowerCase().replace(/^\s*\d+(?:-\d+)?x\s*/,'').replace(/^work up to 1rm\s*/,'').replace(/^1rm\s*/,'').replace(/^3x1\s*@\s*\d+% 1rm\s*/,'').split(/ @ | — | \(|,|\//)[0].trim(); for(const [c,al] of H_LIFTS){ for(const a of al){ if(t===a||t.endsWith(' '+a)||t.startsWith(a+' ')||t===a+'s') return c; } } for(const [c,al] of H_LIFTS){ for(const a of al){ if(t.includes(a)) return c; } } return null; }
-function hMax(l){ return (S.h.maxes||{})[l]; }
-function hSetMax(l,v){ S.h.maxes=S.h.maxes||{}; if(v===''||isNaN(+v)) delete S.h.maxes[l]; else S.h.maxes[l]=+v; save(); render(); }
+function hMax(l){ const m=(S.maxes||{})[l]; return m?m.v:undefined; }
+function hMaxSrc(l){ const m=(S.maxes||{})[l]; return m?m.src:''; }
+function hSetMax(l,v,src){ S.maxes=S.maxes||{}; if(v===''||v==null||isNaN(+v)) delete S.maxes[l]; else S.maxes[l]={v:+v,src:src||'tested',date:new Date().toISOString()}; save(); render(); }
+function hNoteEst(l,e){ if(!l||!e) return; S.maxes=S.maxes||{}; const cur=S.maxes[l]; if(!cur||e>cur.v){ S.maxes[l]={v:Math.round(e),src:'est',date:new Date().toISOString()}; } }
+function hSet1RM(lift,v){ const x=hEnsure(S.h.m,S.h.d); x.m1rm=x.m1rm||{}; if(v===''){ delete x.m1rm[lift]; save(); render(); return; } x.m1rm[lift]=+v; if(!x.date) x.date=new Date().toISOString(); hSetMax(lift,+v,'tested'); }
+function hBase(lift){ const x=hDay(S.h.m,S.h.d); if(x&&x.m1rm&&x.m1rm[lift]) return x.m1rm[lift]; return hMax(lift); }
+const HPO_LIFT={'Barbell Bench Press':'bench press','Barbell Back Squat':'back squat','Barbell Front Squat':'front squat','Low Handle Trap Bar Deadlift':'deadlift','High Handle Trap Bar Deadlift':'deadlift','Trap Bar Deadlift':'deadlift','Barbell Incline Bench Press':null};
 function hSetBW(v){ S.bw=v===''?null:+v; save(); render(); }
 function hCalc(txt){ // returns html chip for computed loads, or ''
-  const bw=/\bBW\b/.test(txt), lift=bw?null:hLift(txt), base=bw?S.bw:(lift?hMax(lift):null);
+  const bw=/\bBW\b/.test(txt), lift=bw?null:hLift(txt), base=bw?S.bw:(lift?hBase(lift):null);
   const outs=[]; const pct=[...txt.matchAll(/(\d+)(?:-(\d+))?%/g)]; const mult=[...txt.matchAll(/(\d*\.?\d+)x BW/gi)];
   if(!pct.length&&!mult.length&&!/@ BW\b/.test(txt)) return '';
   if(!base) return `<span class="calc miss">${bw?'set bodyweight':lift?'set 1RM '+lift:'1RM?'}</span>`;
@@ -533,17 +557,22 @@ function hMaxPanel(w){ // inputs for every lift referenced by %/1RM in this work
   (w.b||[]).flat().forEach(l=>{ if(l.startsWith('#')) return; if(/\bBW\b/.test(l)) bw=true; if(/%|1RM/i.test(l)){ const c=hLift(l); if(c) lifts.add(c); } });
   if(!lifts.size&&!bw) return '';
   let h='<div class="maxes"><div class="mh">Your maxes</div>';
-  [...lifts].forEach(l=>{ h+=`<label><span>1RM ${l}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value)"></label>`; });
+  [...lifts].forEach(l=>{ h+=`<label><span>1RM ${l}${hMaxSrc(l)==='est'?' <i>est.</i>':''}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value,'tested')"></label>`; });
   if(bw) h+=`<label><span>Bodyweight</span><input type="number" inputmode="decimal" value="${S.bw??''}" placeholder="lb" onchange="hSetBW(this.value)"></label>`;
   return h+'</div>'; }
+
+function hInfo(i){ const line=hInfoLines[i]; if(!line) return; const g=hGloss(line), term=hTerm(line); const q=encodeURIComponent((g?g.name:term)+' exercise');
+  const sheet=document.getElementById('sheet'); sheet.innerHTML=`<div class="sh"><h3>${esc(g?g.name:term)}</h3><p>${g?esc(g.def):'No definition in the guide — the guide says: if it\'s unclear, pick a different one or be a Team guy and make it up.'}</p><a class="btn ghost" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q}">▶ Watch on YouTube</a> <a class="btn ghost" target="_blank" rel="noopener" href="https://www.google.com/search?q=${q}">Search</a><button class="btn" style="margin-top:12px" onclick="document.getElementById('sheet').classList.remove('open')">Close</button></div>`; sheet.classList.add('open'); }
+let hInfoLines=[];
 const SCALES=[['scaled','Scaled'],['rx','RX'],['rxp','RX+']];
 function hSetScale(sc){ const x=hEnsure(S.h.m,S.h.d); x.scale=sc; x.ov={}; save(); render(); }
 function hCycle(idx){ const x=hEnsure(S.h.m,S.h.d); x.ov=x.ov||{}; const cur=x.ov[idx]||x.scale||'rx'; const i=SCALES.findIndex(z=>z[0]===cur); x.ov[idx]=SCALES[(i+1)%3][0]; save(); render(); }
 function hSet(f,v){ const x=hEnsure(S.h.m,S.h.d); x[f]=v; if(!x.date) x.date=new Date().toISOString(); save(); if(f==='wo'||f==='warm') render(); }
 function hFinish(){ const x=hEnsure(S.h.m,S.h.d); x.done=!x.done; if(x.done){ x.date=x.date||new Date().toISOString(); if(!x.scale) x.scale='rx'; toast('Logged — next day loaded'); save(); hGoNext(); render(); window.scrollTo(0,0); return; } save(); render(); }
-function hLines(w,scale,ov){ let idx=0, h=''; (w.b||[]).forEach(blk=>{ h+='<div class="hblk">'; blk.forEach(line=>{ if(line.startsWith('#')){ h+=`<div class="hh">${esc(line.slice(1))}</div>`; return; } const i=idx++; const sc=(ov&&ov[i])||scale; const txt=hScaleLine(line,sc); h+=`<button class="hl ${sc}" onclick="hCycle(${i})"><span>${esc(txt)}${hCalc(txt)}</span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button>`; }); h+='</div>'; }); return h; }
+function hLines(w,scale,ov){ let idx=0, h=''; (w.b||[]).forEach(blk=>{ h+='<div class="hblk">'; blk.forEach(line=>{ if(line.startsWith('#')){ h+=`<div class="hh">${esc(line.slice(1))}</div>`; return; } const i=idx++; const sc=(ov&&ov[i])||scale; const txt=hScaleLine(line,sc); const gi=hInfoLines.push(txt)-1; h+=`<div class="hlrow"><button class="hl ${sc}" onclick="hCycle(${i})"><span>${esc(txt)}${hCalc(txt)}</span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button><button class="info" onclick="hInfo(${gi})" aria-label="what is this">?</button></div>`;
+      if(/work up to 1rm|^1rm |max rep test|^max /i.test(txt)&&hLift(txt)&&ov!==null){ const lift=hLift(txt), x=hDay(S.h.m,S.h.d)||{}, today=x.m1rm&&x.m1rm[lift]; h+=`<div class="oneRM"><span>Today's 1RM ${esc(lift)}</span><input type="number" inputmode="decimal" value="${today??''}" placeholder="${hMax(lift)?hMax(lift)+' on file':'lb'}" onchange="hSet1RM('${lift}',this.value)"><small>${today?'saved to your maxes':hMax(lift)?`using ${hMax(lift)}# (${hMaxSrc(lift)==='est'?'estimated from lifting log':'tested'})`:'enter it and the % lines below update'}</small></div>`; } }); h+='</div>'; }); return h; }
 function hStrip(){ const m=S.h.m; let h='<div class="weekstrip">'; for(let d=1;d<=28;d++){ const t=hType(m,d), x=hDay(m,d); const cls=t.c==='rest'?'rest':''; h+=`<button class="${d===S.h.d?'cur':''} ${x?.done?'done':''} ${cls}" onclick="S.h.d=${d};save();render()">${d}</button>`; } return h+'</div>'; }
-function vHDay(){
+function vHDay(){ hInfoLines=[];
   const m=S.h.m,d=S.h.d,t=hType(m,d), x=hDay(m,d)||{}, nx=hNext();
   let h=`<div class="top"><h1>Day ${d}<small>${H_MONTHS[m-1].name}${nx.m===m&&nx.d===d?' · up next':''}</small></h1><span class="chip" id="status"></span></div>`;
   h+=`<div class="chips">${H_MONTHS.map((mo,i)=>`<button class="chip ${i+1===m?'on':''}" onclick="S.h.m=${i+1};S.h.d=1;save();render()">M${i+1}</button>`).join('')}${nx.m===m&&nx.d===d?'':`<button class="chip" style="border-color:var(--accent);color:var(--accent-ink)" onclick="hGoNext();save();render()">Up next → M${nx.m} D${nx.d}</button>`}</div>`;
@@ -571,8 +600,9 @@ function vHDay(){
   }
   return h;
 }
-function vHLib(){
+function vHLib(){ hInfoLines=[];
   let h=`<div class="top"><h1>Library<small>4 Horsemen — every workout</small></h1><span class="chip" id="status"></span></div>`;
+  h+=`<details class="prep"><summary>Glossary <span style="color:var(--ink2);font-weight:600">${H_GLOSS.length}</span></summary><p class="help">Tap ? next to any line in a workout for its definition and a video link. Definitions marked from the guide are the Horsemen's own.</p>${H_GLOSS.map(([re,n,d])=>`<div class="gl"><b>${esc(n)}</b><span>${esc(d)}</span><a target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n+' exercise')}">▶ video</a></div>`).join('')}</details>`;
   const cats=Object.keys(H_CATS).filter(c=>c!=='warm').concat(['warm']);
   cats.forEach(c=>{ const ws=H_WORKOUTS.filter(w=>w.c===c); if(!ws.length) return; h+=`<details class="prep"><summary>${H_CATS[c]} <span style="color:var(--ink2);font-weight:600">${ws.length}</span></summary>`; ws.forEach(w=>{ const b=hBest(w.n); h+=`<div class="ex" style="margin:6px 0"><h3 style="font-size:17px">${esc(w.n)}${w.sub?` <small style="color:var(--ink2);font-weight:600">${w.sub}</small>`:''}</h3>${b?`<div class="sub"><span>done ${b.n}×</span><span class="pr">${b.time?'best '+b.time.time:b.score?'best '+b.score.score:''}</span></div>`:''}${hLines(w,'rx',null).replace(/onclick="hCycle\(\d+\)"/g,'disabled')}</div>`; }); h+='</details>'; });
   return h;
@@ -653,7 +683,7 @@ function tick(key,s){ const ss=ensure(planFor(S.week),S.week,S.day); if(!ss.sets
   if(!ss.date) ss.date=new Date().toISOString(); save(); render(); }
 function checkPR(key){ const [bi,ei]=key.split('-'); const ex=exList(planFor(S.week),S.week,S.day)[bi][ei]; const ss=ensure(planFor(S.week),S.week,S.day); const cur=(ss.sets[key]||[]).filter(s=>s&&typeof s.w==='number'&&s.w&&s.r);
   if(!cur.length||KIND[ex.p][0]!=='reps'||!KIND[ex.p][1]) return; const h=history(ex.n).filter(x=>!(x.week===S.week&&x.plan===S.plan&&x.day===S.day)); let prev=0; h.forEach(x=>x.sets.forEach(s=>{if(typeof s.w==='number'&&s.w&&s.r)prev=Math.max(prev,e1rm(s.w,+s.r));}));
-  const now=Math.max(...cur.map(s=>e1rm(+s.w,+s.r))); if(prev&&now>prev) toast(`PR — ${ex.n.split(' (')[0]} e1RM ${Math.round(now)} ${exUnit(ex.n)}`); }
+  const now=Math.max(...cur.map(s=>e1rm(+s.w,+s.r))); if(HPO_LIFT[ex.n]&&exUnit(ex.n)==='lb') hNoteEst(HPO_LIFT[ex.n],now); if(prev&&now>prev) toast(`PR — ${ex.n.split(' (')[0]} e1RM ${Math.round(now)} ${exUnit(ex.n)}`); }
 function setNotes(v){ ensure(planFor(S.week),S.week,S.day).notes=v; save(); }
 function finish(){ const ss=ensure(planFor(S.week),S.week,S.day); ss.done=!ss.done; if(ss.done){ ss.date=ss.date||new Date().toISOString(); if(ss.timer&&!ss.timer.end){ const c=ss.timer.segs.find(x=>!x.end); const now=Date.now(); if(c) c.end=now; ss.timer.end=now; } toast('Session saved — next workout loaded'); save(); goNext(); render(); window.scrollTo(0,0); return; } else if(ss.timer&&ss.timer.end){ ss.timer.end=null; } save(); render(); }
 
@@ -749,7 +779,7 @@ function drawChart(pts){
 function vMore(){
   let h=header('settings & backup');
   h+=`<h2 class="sec">Default unit</h2><p class="help">Tap the lb/kg tag next to any exercise on Train to set its own unit (logged weights convert). This is only the default for lifts you have not set.</p><div class="chips"><button class="chip ${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();render()">lb</button><button class="chip ${S.unit==='kg'?'on':''}" onclick="S.unit='kg';save();render()">kg</button></div>`;
-  h+=`<h2 class="sec">Bodyweight &amp; 1RMs</h2><p class="help">Used to calculate %-based loads in 4 Horsemen. Update after a new max.</p><div class="maxes"><label><span>Bodyweight</span><input type="number" inputmode="decimal" value="${S.bw??''}" placeholder="lb" onchange="hSetBW(this.value)"></label>${H_LIFTS.map(([l])=>`<label><span>1RM ${l}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value)"></label>`).join('')}</div>
+  h+=`<h2 class="sec">Bodyweight &amp; 1RMs</h2><p class="help">Shared across every program. Tested maxes you enter here or on a 1RM day win; <i>est.</i> means it was raised automatically from a heavy set in the HPO log and will be replaced the next time you test.</p><div class="maxes"><label><span>Bodyweight</span><input type="number" inputmode="decimal" value="${S.bw??''}" placeholder="lb" onchange="hSetBW(this.value)"></label>${H_LIFTS.map(([l])=>`<label><span>1RM ${l}${hMaxSrc(l)==='est'?' <i>est.</i>':''}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value,'tested')"></label>`).join('')}</div>
   <h2 class="sec">Backup</h2><p class="help">Your log is stored on this phone and survives closing the app and reboots${storageOK?'':' (saving is currently unavailable — export now to keep your log)'}. Export a copy any time and paste it back to restore or move devices.</p>`;
   h+=`<div class="row"><button class="btn ghost" onclick="exportData()">Save backup file</button><button class="btn ghost" onclick="document.getElementById('imp').style.display='block'">Restore from backup</button></div>`;
   h+=`<div id="imp" style="display:none;margin-top:10px"><input type="file" accept=".json,application/json" onchange="importFile(this)" style="margin-bottom:8px"><textarea class="io" id="impText" placeholder="Paste backup JSON here"></textarea><button class="btn ghost" onclick="importData()">Restore</button></div>`;
