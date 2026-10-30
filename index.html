@@ -143,6 +143,11 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .rrow input:disabled{background:var(--bg);border-style:dashed}
 .rrow .tick{width:44px;height:44px;border-radius:var(--r);border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;color:transparent}
 .rrow .tick.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+.ubtn{display:inline-block;vertical-align:middle;border:2px solid var(--line);border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;background:#fff;color:var(--ink2);margin-left:4px}
+.ubtn.band{border-style:dashed;color:var(--green)}
+.rrow.bandrow{grid-template-columns:18px 1fr 96px 54px 44px}
+.rrow.bandrow input[type=text]{font-size:14px;text-align:left;padding:9px 6px}
 </style>
 </head>
 <body>
@@ -393,7 +398,7 @@ function bestOf(name){
   const h=history(name); if(!h.length) return null;
   const tracksW=KIND[h[0].pat][1]; const unit=KIND[h[0].pat][0];
   let bw=0,bwr=0,b1=0,b1w=0,b1r=0,br=0,brw=0,vol=0,last=h[0];
-  h.forEach(x=>x.sets.forEach(s=>{ const w=+s.w||0,r=+s.r||0;
+  h.forEach(x=>x.sets.forEach(s=>{ const w=(typeof s.w==='number'?s.w:0),r=+s.r||0;
     if(w>bw||(w===bw&&r>bwr)){bw=w;bwr=r;}
     if(unit==='reps'&&w>0&&r>0){ const e=e1rm(w,r); if(e>b1){b1=e;b1w=w;b1r=r;} }
     if(r>br||(r===br&&w>brw)){br=r;brw=w;}
@@ -421,6 +426,14 @@ function splits(){ const t=tm(); if(!t) return ''; const rows=SEGS.map(n=>[n,seg
   const total=(t.end||Date.now())-t.start, acc=rows.reduce((a,x)=>a+x[1],0);
   return `<div class="split">${rows.map(([n,d])=>`<span>${n}</span><b>${fmtDur(d)}</b>`).join('')}${total-acc>5000?`<span style="color:var(--ink2)">Between sections</span><b style="color:var(--ink2)">${fmtDur(total-acc)}</b>`:''}<span style="border-top:1px solid var(--line);padding-top:4px">Total</span><b style="border-top:1px solid var(--line);padding-top:4px">${fmtDur(total)}</b></div>`; }
 setInterval(()=>{ if(S.tab!=='train') return; const t=tm(); if(!t||t.end) return; const bar=document.getElementById('tbar'); if(bar){ const tmp=document.createElement('div'); tmp.innerHTML=timerBar(); bar.replaceWith(tmp.firstChild); } document.querySelectorAll('.segbtn.on').forEach(el=>{ const c=curSeg(); if(c) el.textContent='● '+fmtDur(segDur(c.name)); }); },1000);
+
+
+const isBand=ex=>/\bband/i.test(ex.n)&&ex.p!=='STR';
+const BANDS=['Thin black','Thin red','Thin green','Medium black','Medium green','Thick green','Thick blue','Thick purple','Light (yellow)','Medium (red)','Heavy (blue)','X-heavy (black)','Mini','Monster'];
+function exUnit(name){ return (S.exUnit&&S.exUnit[name])||S.unit; }
+function toggleExUnit(name){ const from=exUnit(name), to=from==='lb'?'kg':'lb'; const f=from==='lb'?0.45359237:2.20462262;
+  for(const k in S.sessions){ const ss=S.sessions[k]; const [p,w,d]=k.split('|'); exList(p,+w.slice(1),+d.slice(1)).forEach((blk,bi)=>blk.forEach((ex,ei)=>{ if(ex.n!==name) return; (ss.sets[bi+'-'+ei]||[]).forEach(v=>{ if(v&&typeof v.w==='number') v.w=Math.round(v.w*f*2)/2; }); })); }
+  S.exUnit=S.exUnit||{}; S.exUnit[name]=to; save(); render(); }
 
 /* ============================ RENDER ============================ */
 function render(){
@@ -451,6 +464,7 @@ function vTrain(){
   h+=weekStrip();
   h+=`<div class="chips">${[...Array(days(p))].map((_,k)=>{const dd=k+1,done=session(p,w,dd)?.done;return `<button class="chip ${dd===d?'on':''}" onclick="setDay(${dd})">Day ${dd}${done?' ✓':''}</button>`;}).join('')}</div>`;
   const prep=PREP[p==='4'?d-1:d-1];
+  h+=`<datalist id="bands">${BANDS.map(b=>`<option value="${b}">`).join('')}</datalist>`;
   h+=timerBar();
   h+=`<details class="prep"><summary>Warm-up: pillar + movement prep ${segBtn('Warm-up')}</summary><div class="cols"><div><h4>Pillar prep</h4><ul>${prep.pillar.map(x=>`<li>${x}</li>`).join('')}</ul></div><div><h4>Movement prep</h4><ul>${prep.move.map(x=>`<li>${x}</li>`).join('')}</ul></div></div></details>`;
   list.forEach((blk,bi)=>{
@@ -462,16 +476,18 @@ function vTrain(){
       const lt=lastTime(ex.n), best=bestOf(ex.n);
       const ltTxt=lt?`last: ${lt.sets.map(s=>(tw&&s.w?s.w+'×':'')+(s.r||'–')).join(', ')}`:'';
       let prTxt='';
-      if(best&&tw&&unit==='reps'&&best.b1) prTxt=`e1RM ${Math.round(best.b1)}`; else if(best&&tw&&best.bw) prTxt=`best ${best.bw}`; else if(best&&best.br) prTxt=`best ${best.br} ${unit}`;
-      h+=`<div class="exh"><b>${String.fromCharCode(65+ei)}</b><span><span class="nm">${esc(ex.n)}</span><span class="tg">3 × ${tg[0]}${ea?' ea':''} ${unit==='reps'?'':unit}${tg[1]!=='-'?' @ RPE '+tg[1]:''}${ex.p==='STR'?' (5s on/5s off)':''}${ltTxt?' · '+ltTxt:''}${prTxt?' · <i>'+prTxt+'</i>':''}</span></span></div>`;
+      if(best&&tw&&unit==='reps'&&best.b1&&!isBand(ex)) prTxt=`e1RM ${Math.round(best.b1)} ${exUnit(ex.n)}`; else if(best&&tw&&best.bw&&!isBand(ex)) prTxt=`best ${best.bw} ${exUnit(ex.n)}`; else if(best&&best.br) prTxt=`best ${best.br} ${unit}`;
+      const uBtn = tw&&!isBand(ex) ? `<button class="ubtn" onclick="toggleExUnit(this.dataset.n)" data-n="${esc(ex.n)}">${exUnit(ex.n)}</button>` : (isBand(ex)?`<span class="ubtn band">band</span>`:'');
+      h+=`<div class="exh"><b>${String.fromCharCode(65+ei)}</b><span><span class="nm">${esc(ex.n)} ${uBtn}</span><span class="tg">3 × ${tg[0]}${ea?' ea':''} ${unit==='reps'?'':unit}${tg[1]!=='-'?' @ RPE '+tg[1]:''}${ex.p==='STR'?' (5s on/5s off)':''}${ltTxt?' · '+ltTxt:''}${prTxt?' · <i>'+prTxt+'</i>':''}</span></span></div>`;
     });
     h+=`</div>`;
     for(let r=0;r<3;r++){
       h+=`<div class="round"><div class="rh">Round ${r+1}</div>`;
       blk.forEach((ex,ei)=>{
         const tg=P[ex.p][i], [unit,tw]=KIND[ex.p], key=bi+'-'+ei, v=(ss.sets[key]||[])[r]||{};
-        h+=`<div class="rrow"><span class="n">${String.fromCharCode(65+ei)}</span><span class="nm">${esc(ex.n.split(' (')[0])}</span>`+
-           `<input type="number" inputmode="decimal" ${tw?'':'disabled'} value="${v.w??''}" placeholder="${tw?S.unit:'—'}" aria-label="weight" onchange="setVal('${key}',${r},'w',this.value)">`+
+        const wIn = isBand(ex) ? `<input type="text" list="bands" value="${esc(v.w??'')}" placeholder="band" aria-label="band" onchange="setVal('${key}',${r},'w',this.value)">`
+          : `<input type="number" inputmode="decimal" ${tw?'':'disabled'} value="${v.w??''}" placeholder="${tw?exUnit(ex.n):'—'}" aria-label="weight" onchange="setVal('${key}',${r},'w',this.value)">`;
+        h+=`<div class="rrow ${isBand(ex)?'bandrow':''}"><span class="n">${String.fromCharCode(65+ei)}</span><span class="nm">${esc(ex.n.split(' (')[0])}</span>`+wIn+
            `<input type="number" inputmode="decimal" value="${v.r??''}" placeholder="${tg[0]}" aria-label="${unit}" onchange="setVal('${key}',${r},'r',this.value)">`+
            `<button class="tick ${v.d?'on':''}" onclick="tick('${key}',${r})" aria-label="mark set done">✓</button></div>`;
       });
@@ -486,14 +502,14 @@ function vTrain(){
   h+=`<p class="help">RPE = reps in reserve scale: 9 → 1 left, 8 → 2 left, 7 → 3 left, 6 → 4-6 left, 5 and below → light.</p>`;
   return h;
 }
-function setVal(key,s,f,v){ const ss=ensure(S.plan,S.week,S.day); if(!ss.sets[key]) ss.sets[key]=[]; if(!ss.sets[key][s]) ss.sets[key][s]={}; ss.sets[key][s][f]=v===''?'':+v; if(!ss.date) ss.date=new Date().toISOString(); checkPR(key); save(); }
+function setVal(key,s,f,v){ const ss=ensure(S.plan,S.week,S.day); if(!ss.sets[key]) ss.sets[key]=[]; if(!ss.sets[key][s]) ss.sets[key][s]={}; ss.sets[key][s][f]=(v===''||(f==='w'&&isNaN(+v)))?v:+v; if(!ss.date) ss.date=new Date().toISOString(); checkPR(key); save(); }
 function tick(key,s){ const ss=ensure(S.plan,S.week,S.day); if(!ss.sets[key]) ss.sets[key]=[]; if(!ss.sets[key][s]) ss.sets[key][s]={}; const v=ss.sets[key][s]; v.d=!v.d;
   // if no reps typed, assume target reps hit
   if(v.d&&v.r===undefined){ const [bi,ei]=key.split('-'); const ex=exList(S.plan,S.week,S.day)[bi][ei]; const t=P[ex.p][wip(S.week)][0]; if(typeof t==='number') v.r=t; }
   if(!ss.date) ss.date=new Date().toISOString(); save(); render(); }
-function checkPR(key){ const [bi,ei]=key.split('-'); const ex=exList(S.plan,S.week,S.day)[bi][ei]; const ss=ensure(S.plan,S.week,S.day); const cur=(ss.sets[key]||[]).filter(s=>s&&s.w&&s.r);
-  if(!cur.length||KIND[ex.p][0]!=='reps'||!KIND[ex.p][1]) return; const h=history(ex.n).filter(x=>!(x.week===S.week&&x.plan===S.plan&&x.day===S.day)); let prev=0; h.forEach(x=>x.sets.forEach(s=>{if(s.w&&s.r)prev=Math.max(prev,e1rm(+s.w,+s.r));}));
-  const now=Math.max(...cur.map(s=>e1rm(+s.w,+s.r))); if(prev&&now>prev) toast(`PR — ${ex.n.split(' (')[0]} e1RM ${Math.round(now)}`); }
+function checkPR(key){ const [bi,ei]=key.split('-'); const ex=exList(S.plan,S.week,S.day)[bi][ei]; const ss=ensure(S.plan,S.week,S.day); const cur=(ss.sets[key]||[]).filter(s=>s&&typeof s.w==='number'&&s.w&&s.r);
+  if(!cur.length||KIND[ex.p][0]!=='reps'||!KIND[ex.p][1]) return; const h=history(ex.n).filter(x=>!(x.week===S.week&&x.plan===S.plan&&x.day===S.day)); let prev=0; h.forEach(x=>x.sets.forEach(s=>{if(typeof s.w==='number'&&s.w&&s.r)prev=Math.max(prev,e1rm(s.w,+s.r));}));
+  const now=Math.max(...cur.map(s=>e1rm(+s.w,+s.r))); if(prev&&now>prev) toast(`PR — ${ex.n.split(' (')[0]} e1RM ${Math.round(now)} ${exUnit(ex.n)}`); }
 function setNotes(v){ ensure(S.plan,S.week,S.day).notes=v; save(); }
 function finish(){ const ss=ensure(S.plan,S.week,S.day); ss.done=!ss.done; if(ss.done){ ss.date=ss.date||new Date().toISOString(); if(ss.timer&&!ss.timer.end){ const c=ss.timer.segs.find(x=>!x.end); const now=Date.now(); if(c) c.end=now; ss.timer.end=now; } toast('Session saved'); } else if(ss.timer&&ss.timer.end){ ss.timer.end=null; } save(); render(); }
 
@@ -553,9 +569,9 @@ function vPRs(){
   h+='<div class="prlist">';
   rows.forEach(({n,b})=>{
     h+=`<div class="prcard"><h3>${esc(n)}</h3>`;
-    if(b.tracksW&&b.unit==='reps'&&b.b1) h+=`<span class="k">Est. 1RM</span><span class="v">${Math.round(b.b1)}<small> ${S.unit} (${b.b1w}×${b.b1r})</small></span>`;
-    if(b.tracksW&&b.bw) h+=`<span class="k">Heaviest</span><span class="v">${b.bw}<small> ${S.unit} × ${b.bwr} ${b.unit}</small></span>`;
-    if(b.br) h+=`<span class="k">Most ${b.unit}</span><span class="v">${b.br}<small>${b.brw?' @ '+b.brw+' '+S.unit:''}</small></span>`;
+    if(b.tracksW&&b.unit==='reps'&&b.b1) h+=`<span class="k">Est. 1RM</span><span class="v">${Math.round(b.b1)}<small> ${exUnit(n)} (${b.b1w}×${b.b1r})</small></span>`;
+    if(b.tracksW&&b.bw) h+=`<span class="k">Heaviest</span><span class="v">${b.bw}<small> ${exUnit(n)} × ${b.bwr} ${b.unit}</small></span>`;
+    if(b.br) h+=`<span class="k">Most ${b.unit}</span><span class="v">${b.br}<small>${b.brw?' @ '+b.brw+' '+exUnit(n):''}</small></span>`;
     h+=`<span class="k">Logged</span><span class="v" style="font-size:16px">${b.n} session${b.n>1?'s':''}</span></div>`;
   });
   return h+'</div>';
@@ -568,8 +584,8 @@ function vProgress(){
   if(!S.chartEx||!names.includes(S.chartEx)) S.chartEx=names[0];
   h+=`<div class="picker" style="grid-template-columns:1fr"><div><label>Lift</label><select onchange="S.chartEx=this.value;save();render()">${names.map(n=>`<option ${n===S.chartEx?'selected':''}>${esc(n)}</option>`).join('')}</select></div></div>`;
   const hist=history(S.chartEx).slice().reverse(), unit=KIND[hist[0].pat][0], tw=KIND[hist[0].pat][1];
-  const metric = tw&&unit==='reps' ? 'Est. 1RM' : tw ? `Top weight (${S.unit})` : `Best ${unit}`;
-  const pts=hist.map(x=>{ let v=0; x.sets.forEach(s=>{ const w=+s.w||0,r=+s.r||0; v=Math.max(v, tw&&unit==='reps'?(w&&r?e1rm(w,r):0): tw? w : r); }); return {l:`W${x.week}`,v}; });
+  const metric = tw&&unit==='reps' ? `Est. 1RM (${exUnit(S.chartEx)})` : tw ? `Top weight (${exUnit(S.chartEx)})` : `Best ${unit}`;
+  const pts=hist.map(x=>{ let v=0; x.sets.forEach(s=>{ const w=(typeof s.w==='number'?s.w:0),r=+s.r||0; v=Math.max(v, tw&&unit==='reps'?(w&&r?e1rm(w,r):0): tw? w : r); }); return {l:`W${x.week}`,v}; });
   h+=`<p class="help">${metric} per session</p><canvas id="chart" width="600" height="220"></canvas>`;
   h+=`<table><tr><th>Week</th><th>Day</th><th>Date</th><th>Sets</th></tr>${hist.slice().reverse().map(x=>`<tr><td>${x.week}</td><td>${x.day}</td><td>${fmtDate(x.date)}</td><td>${x.sets.map(s=>(tw&&s.w?s.w+'×':'')+(s.r||'–')).join(', ')}</td></tr>`).join('')}</table>`;
   setTimeout(()=>drawChart(pts),0);
@@ -588,7 +604,7 @@ function drawChart(pts){
 
 function vMore(){
   let h=header('settings & backup');
-  h+=`<h2 class="sec">Units</h2><div class="chips"><button class="chip ${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();render()">lb</button><button class="chip ${S.unit==='kg'?'on':''}" onclick="S.unit='kg';save();render()">kg</button></div>`;
+  h+=`<h2 class="sec">Default unit</h2><p class="help">Tap the lb/kg tag next to any exercise on Train to set its own unit (logged weights convert). This is only the default for lifts you have not set.</p><div class="chips"><button class="chip ${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();render()">lb</button><button class="chip ${S.unit==='kg'?'on':''}" onclick="S.unit='kg';save();render()">kg</button></div>`;
   h+=`<h2 class="sec">Backup</h2><p class="help">Your log is stored on this phone and survives closing the app and reboots${storageOK?'':' (saving is currently unavailable — export now to keep your log)'}. Export a copy any time and paste it back to restore or move devices.</p>`;
   h+=`<div class="row"><button class="btn ghost" onclick="exportData()">Save backup file</button><button class="btn ghost" onclick="document.getElementById('imp').style.display='block'">Restore from backup</button></div>`;
   h+=`<div id="imp" style="display:none;margin-top:10px"><input type="file" accept=".json,application/json" onchange="importFile(this)" style="margin-bottom:8px"><textarea class="io" id="impText" placeholder="Paste backup JSON here"></textarea><button class="btn ghost" onclick="importData()">Restore</button></div>`;
