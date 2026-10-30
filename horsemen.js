@@ -1,0 +1,254 @@
+// 4 Horsemen Workout Program — data, schedule, and scaling rules
+// Lines starting with "#" are headers (rounds / rep schemes). Everything else is a movement line.
+const H_CATS={strength:'Strength',pe:'Power Endurance',job:'Job Specific',smmf:'SMMF',prog:'Progression',recovery:'Recovery',acc:'Accumulation',density:'Density',ladder:'Breathing Ladder',power:'Power',endurance:'Endurance',circuit:'Circuit',warm:'Warm-up'};
+const W=(n,c,sub,b)=>({n,c,sub,b});
+const H_WORKOUTS=[
+// ---------- WARM UPS ----------
+W('Barbell Complex x4','warm','',[['#4 rounds, add load each round (75/85/95/105# or 85/95/105/115#)','6x DL','6x Bent over row','6x Hang power clean','6x Front squat','6x Push press','6x Back squat','6x Push up']]),
+W('12 min KB Complex','warm','',[['#1 min each, no rest, KB never set down @ 35#','1-arm swing R','Figure 8 R→L','1-arm swing L','Figure 8 L→R','Clean & press R','Slasher to halo','Clean & press L','Slasher to halo','KB snatch R','Lunge R (KB in L)','KB snatch L','Lunge L (KB in R)']]),
+W('Sandbag Get Ups','warm','',[['20x Sandbag get up each shoulder @ 80#']]),
+W('Wall Ball / Sit up / Dislocates','warm','',[['#5 rounds','10x Wall ball','20x Sit up','Shoulder dislocate stretch']]),
+W('DL + KB Clean & Press','warm','',[['#5 rounds','10x DL @ 135#','5x 1-arm KB clean & press @ 44#']]),
+W('Finger Board Hangs','warm','',[['#5 rounds','1 min hanging with constant movement on finger board','50 sec rest']]),
+W('Swings / Jumping Lunges / Push ups','warm','',[['#5 rounds','20x KB swing @ 44#','7x Jumping lunges','10x Push up']]),
+W('Swing + DB Push Press Ladder','warm','',[['#10-9-8-7-6-5-4-3-2-1','KB swing x2 (20, 18…) @ 70#','DB push press @ 2x 35#']]),
+W('30 Power Cleans (and Press)','warm','',[['#6x5 @ 135#+','Power clean (and press)']]),
+W('Squat Jump / Clap Push up / SAM','warm','',[['#5 rounds','10x Squat jump','10x Clapping push up','5x Shoulder pole press','5x PVC halo']]),
+W('10 min Step ups','warm','',[['10 min step ups @ 20" with load of your choice (ruck, DB, KB)']]),
+W('10 min KB Complex','warm','',[['#@ 1x 35#, 44# or 53#','1-arm swing','Lunge in place L','1-arm swing','Lunge in place R','1-arm clean & press L','Slasher to halo','1-arm clean & press R','Slasher to halo','Figure 8 x2']]),
+W('TGU + SAM','warm','',[['#5 rounds','3x Turkish get up (light, straight to feet)','SAM drill: 5x pole press, 3x halo, 5x OHS with PVC']]),
+W('Row + Power Clean','warm','',[['#3 rounds','Row 250m','5x Power clean @ 135#']]),
+W('2K Row','warm','',[['2K row — 8 min']]),
+W('TGU / Burpee / Step up','warm','',[['#4 rounds','5x Turkish get up','5x Burpee','10x Step up @ 35#']]),
+W('OHS / Push up / Pull up','warm','',[['#3 rounds','10x OHS','10x Push up','3x Pull up']]),
+W('Row 500m + 3x Barbell Complex','warm','',[['Row 500m','3x Barbell complex']]),
+W('Row 500m + DL/Push up','warm','',[['Row 500m','#3 rounds','10x DL @ 135#','10x Push up']]),
+W('1 Mile Tire Drag','warm','',[['1 mile tire drag']]),
+// ---------- POWER ENDURANCE ----------
+W('Palin in 2012!','pe','',[['#(1) For time','Run 400m','10x Turkish get up @ 35# (each hand)','40x Jumping lunges (20 each leg)','Run 400m','7x Turkish get up (each hand)','30x Jumping lunges','Run 400m','5x Turkish get up (each hand)','20x Jumping lunges','Run 400m','3x Turkish get up (each hand)','10x Jumping lunges'],['#(2) 10 rounds (grind, not for time)','5x Pull up','10x Dip','15x Push up']]),
+W('Secret Service Snatch Test','pe','',[['#Max KB snatches in 10 min @ 53#, alternate hands as desired','KB snatch @ 53#','#100 lethargic · 150 Team Guy standard · 200 really good · 250 ridiculous · 275 record']]),
+W('3 Mile Run — All Out','pe','',[['3 mile run, all out effort — under 20:00']]),
+W('Counting Dead Bodies Like Sheep','pe','',[['#5x lunge + 5x push press, repeat for 400m (20-30 min)','5x Lunge @ 45# bar or 2x 25# DB','5x Push press @ 45# bar or 2x 25# DB']]),
+W("Get Ups Till You Throw Up",'pe','',[['100x Sandbag get up @ 85-95#','then suicide sprint every 30 sec for 10 min']]),
+W('Tabata Hell','pe','',[['#1 min rest between movements; score = total reps','Tabata Squat (rest in bottom hold)','Tabata Push up (rest in plank)','Tabata Ball slam @ 20# (rest with ball overhead)','Tabata Sit up (rest legs held 6-12" off floor)','Tabata KB swing @ 53# (rest holding KB)']]),
+W('Cheech — 5K Row','pe','',[['5K row, all out effort — under 20:00']]),
+W("He'll Raise Your Taxes",'pe','',[['#(1) 3 rounds for time','Run 400m plus hill with sandbag','15x Burpee'],['#(2) 10-9-8-7-6-5-4-3-2-1 (grind)','KB swing x2 (20, 18…) @ 53#','Elevated push up','Sit up x2','Dip','Pull up']]),
+W('Teabag Your Buddy Tonight','pe','',[['#Every minute for 20 min','2x Sandbag clean & squat @ 85-95#','3x Burpee']]),
+W('Drunken Lullaby','pe','',[['#20-15-10-5','Sandbag get up @ 85#','Push up','Box jump x2 (40, 30…)','Sandbag half moon @ 35#']]),
+W('I Am Ron Bergundy?','pe','',[['#(1)','50x KB get up @ 35# (each arm)'],['#(2) 10 rounds','5x Pull up','10x Push up','30m Farmer carry']]),
+W('Fuck Start Your Face','pe','',[['#(1) 10-9-8-7-6-5-4-3-2-1','Renegade man maker @ 2x 25# DB','2 min Step up @ farmer carry'],['#(2) 5 rounds','400m Run carrying 1 DB @ 25#','5x Get up with same DB','10x Burpee'],['#(3) 5 rounds','10x DL @ BW','10x Burpee','10x KB swing @ 55#','5x Pull up','10x DB push press @ 45#']]),
+W('Your Mama Called','pe','',[['#(1) 15-14-13…3-2-1','Hang squat clean @ 95#','Ankles to bar','Push up'],['#(2) 3 rounds','Plate shuffle','10x Sit up','10x Back extension']]),
+W('Girl Farts','pe','',[['#10-9-8-7-6-5-4-3-2-1','Row 100m x round (1000m, 900m…)','Renegade man maker @ 25#']]),
+W('Lovely Turd','pe','',[['#(1) 5 rounds, 1 min rest','5x HSC','5x Push press','5x Box jump'],['#(2) 5 rounds, 1 min rest','5x Bench press','5x Dip','5x Plyo push up'],['#(3) 5 rounds, 1 min rest','5x Sandbag squat jump','5x Heavy swing','1x Sled push'],['#(4) 5 rounds','5x Sprint','5x Goblet squat (HEAVY)','10x Jumping lunges']]),
+W('Big 5-55','pe','',[['#10-9-8-7-6-5-4-3-2-1','Get up with 15# sandbags (10 each shoulder)','KB swing @ 2x 35#','Jumping lunges (each leg)','Push up x2 (20, 18…)','Sit up x3 (30, 27…)']]),
+W('Ronald Regan','pe','',[['#(1)','Work up to 1RM Front squat'],['#(2) 10-9-8-7-6-5-4-3-2-1','Thruster @ 125# (HEAVY)','Weighted pull up @ 15#'],['#(3) 3 rounds','1x Rock squat & carry','3x Heavy get up (each shoulder)']]),
+W('Sick and Twisted','pe','',[['#(1)','Max strict pull up test'],['#(2) 5 rounds','3x Press / push press / push jerk complex @ 95#','5x KTE','10x Kip pull up'],['#(3) 5 rounds','5x Bench press','10x Band GHD sit up'],['#(4) 3 rounds','10x 1-arm standing barbell press','15x Floor wiper @ 165#']]),
+W('D-Day (June 6)','pe','',[['#(1) 10-9-8-7-6-5-4-3-2-1','KB rack step up @ 2 KB','Windshield wipers'],['#(2) 3 rounds','400m Run','30x Glute ham sit up','30x Back extension']]),
+// ---------- STRENGTH ----------
+W('Tongue Lashing','strength','',[['#(1)','Work up to 1RM Standing press'],['#(2) 6 rounds','3x Press @ 75-80% 1RM','10m Walking lunge holding DB'],['#(3) 5 rounds',"5x Curtis P",'1x Rope climb or 10x Pull up'],['#(4)','30/30 Jingle jangles']]),
+W('Riley Black (Ladders)','strength','',[['#3-5 ladders of 1-3 reps, ≥3 min rest between ladders; 3 bars: 95% / 90% / 85%','Pick: Bench press, DL, Front squat, OHS, Standing military press, Squat, or Weighted pull up','All reps technically perfect']]),
+W('Ben Franklin','strength','',[['#5 rounds','1 min KB swing @ 53#','10x Cauldron each side @ 30#','15x Ankles to bar','20x GHD sit up',"20x Poor man's reverse hyper"]]),
+W('Snatch Your Face','strength','oly',[['#80% 3r, 85% 2r, 90% 1r, 85% 2r each','Snatch','Power clean','Jerk from rack','Clean pull','Front squat','Good morning']]),
+W('Russian Aggression','strength','',[['#(1)','Work up to 1RM Front squat'],['#(2) 10 rounds, every 40 sec','3x Front squat @ 75% 1RM'],['#(3) 5 rounds','8x DL @ 185#','30m Sled push','5x 1-arm weighted sit up (each arm)'],['#(4) 3 rounds','10x Elevated push up','1x Rope climb or 10x Pull up','8x Standing DB press'],['#(5) 3 rounds','1 min KB swing @ 53#','30 sec rest']]),
+W('Juicy Heartache','strength','',[['#(1)','Work up to 1RM Push press'],['#(2) 10 rounds, every 40 sec','3x Push press @ 75% 1RM'],['#(3) 5 rounds','5x Mr. Spectacular','5x Sandbag half moon each side','10x Russian twist each side'],['#(4) 3 rounds','Heavy rock squat & carry (6x squat, 30m carry)','3x Sandbag get up each shoulder']]),
+W('Gorilla Mania','strength','oly',[['Power snatch — 80% 3r, 85% 2r, 90% 1r, 80% 3r x2','Power clean — 80% 3r, 85% 2r, 90% 1r x2','Power jerk — 80% 3r, 85% 2r, 90% 1r x2','Clean pull — 80% 2r, 85% 3r, 90% 2r, 100% 1r','Front squat — 80% 2r, 85% 3r, 90% 2r x3, 85% 3r, 80% 3r','Bench press — 80% 3r, 85% 2r, 90% 2r']]),
+W('Goldman Sachs','strength','',[['#(1)','Work up to 1RM Clean squat & push press'],['#(2) 10 rounds, every 40 sec','2x Clean squat & push press @ 75% 1RM'],['#(3) 6 rounds','15x KB swing (HEAVY)','10x Bench press @ 65% 1RM','30m Tire drag (15 fwd / 15 back)'],['#(4) 4 rounds','30 sec Jingle jangles','30 sec rest']]),
+W('Chin Up. Soldier On.','strength','',[['#(1)','Work up to 1RM DL'],['#(2) 5 rounds','3x DL @ 85% 1RM','10x Ring push up'],['#(3) 5 rounds','5x Thruster (GO HEAVY)','15 ft Rope climb or 10x Pull up'],['#(4) 5 rounds','1x Double eagle','10x 1-arm bench press (each arm)']]),
+W('Honey Butter (Maintenance)','strength','maint',[['#(1) 7 rounds','5x DL (start 50% 1RM, add weight each round)','10x Box jump @ 24"','10x Weighted sit up (HEAVY)'],['#(2) 5 rounds','Heavy bag clean, squat 3x and run @ 105#','5x Bench press (start 65%, add each round)','1x Rope climb or 10x Pull up'],['#(3) 3 rounds','20m DB crawl @ 55#','5x Glute ham raise']]),
+W('Family Friendly Violence','strength','',[['#(1) 7 rounds','5x DL (increase weight each round)','3x Turkish get up @ 35#','5x Ankles to bar'],['#(2) 5 rounds','8x Hang squat clean @ 165#','30m Tire drag','10m DB crawl @ 2x 55#'],['#(3) 10 rounds','5x Pull up','10x Dip','15x Push up']]),
+W('Act With a Purpose','strength','',[['#(1)','1RM Front squat'],['#(2) 5 rounds','3x Front squat @ 85% 1RM','3x Box jump @ 24"','10m DB crawl @ 2x 55#'],['#(3) 5 rounds','10x Thruster','30m Tire drag','5x Glute ham raise'],['#(4) 5 rounds','5x Pull up','10x Dip','5x Rotator scarecrow']]),
+W('Soviet Capitalists','strength','',[['#(1)','Work up to 1RM Squat clean'],['#(2) 5 rounds','2x Clean & squat @ 85-90% 1RM','10x Glute ham raise','10x Dip'],['#(3) 7 rounds','6x Heavy bag clean & squat','30m Sled push','1x Rope climb or 10x Pull up'],['#(4) 5 rounds','1x Mini blaster','10x GHD sit up or 5x Ankles to bar']]),
+W('Hook and Bullet','strength','',[['#(1) 5 rounds','5x Mr. Spectacular @ 2x 35# KB','15m DB crawl @ 2x 25# DB','10x Cauldron each direction @ 25#'],['#(2) 5 rounds','5x 1-arm sit up (each arm)','10x Floor wiper each direction','10x Corkscrew (20 total)'],['#(3) 3 rounds','15x DL @ 115-135#','3x Turkish get up each arm']]),
+W('Well Done Is Better Than Well Said','strength','',[['#(1) Every 50 sec for 10 rounds','3x DL @ 75% 1RM'],['#(2) Every 50 sec for 10 rounds','3x Bench press @ 75% 1RM'],['#(3) 5 rounds','15x KB swing @ 53#','3x Turkish get up each shoulder @ 35#','30m Tire drag (15 fwd / 15 back)','10x Weighted sit up @ 45#']]),
+W('Bloody Nose','strength','',[['#(1) 5 rounds','3x DL','3x Bench press'],['#(2) 15-10-5',"Curtis P @ 95#",'GHD sit up','Ring dip','Back extension','Pull up']]),
+W('Wasted Love','strength','',[['#(1) 3 rounds','5x "The Exercise" (snatch + OHS)','10x KTE'],['#(2) 3 rounds','5x Sandbag clean & press','10x Heavy swing','15x Ball slam @ 25#']]),
+W('Max Out!','strength','',[['#(1) 5-4-3-2-1-1-1-1','DL','Bench press'],['#(2) 3 rounds','3x Heavy bag clean & press','1x KB pull'],['#(3) 3 rounds','10x Box jump','5x Get up (each hand)']]),
+W('Brollicked','strength','',[['#(1) 5 rounds','5x HSC','5x Bench press'],['#(2)','50x Turkish get up (25 each hand)']]),
+// ---------- SMMF ----------
+W('100 HSPU in 50 min','smmf','',[['1x HSPU every 30 sec for 50 min (100 total)']]),
+W('100 Get Ups','smmf','',[['100x Get up @ 35# KB — 15-20 min']]),
+W('100 Rep Challenge','smmf','',[['100x reps of any big lift @ 50% 1RM']]),
+W('500m Lunge','smmf','',[['500m lunge (10x 50m), add then subtract weight progressively, vary carry every 50m (suitcase, farmer, overhead, crosswalk)']]),
+W('100 Burpee + Pull up','smmf','',[['100x Burpee / pull up combo']]),
+W("100 Curtis P's",'smmf','',[["100x Curtis P"]]),
+W('100 Sandbag Get Ups','smmf','',[['100x Sandbag get up']]),
+W('1 Mile Heavy Bag Carry','smmf','',[['1 mile heavy bag carry (30/60/90 ft fastrope in Yates bag)']]),
+W('400m Rob Shauls','smmf','',[['400m "Rob Shauls" @ 75#']]),
+W('Karen','smmf','',[['150x Wall ball for time']]),
+// ---------- PROGRESSION ----------
+W('Meritorious','prog','',[['30x HSPU','40x Pull up','50x KB swing @ 53#','60x Sit up','70x Burpee']]),
+W('George Washington','prog','',[['Row 500m','50x Box jump @ 24"','50x Push up','50x Sit up','50x Jumping pull up','50x Back extension','50x Ring dip','20x Get up @ 26# KB']]),
+W('Sherbert','prog','',[['#10-20 min','10x Pull up','20x KB swing @ 53#','30x Box jump @ 24"','40x Push up','50x Sit up','60x Burpee','10x Pull up']]),
+W('Thruster / Wall Ball / Slam 300','prog','',[['100x Thruster @ 45# bar','100x Wall ball @ 20#','100x Ball slam @ 20#']]),
+W('300','prog','',[['#15-30 min','25x Pull up','50x DL @ 135#','50x Push up','50x Box jump @ 24"','50x Floor wiper @ 135# (one-count)','50x KB clean & press @ 35# (KB touches floor each rep)','25x Pull up']]),
+W('Till U Collapse','prog','',[['50x Power clean @ 95#','50x Sit up','25x Pull up','50x KB swing @ 53#','25x Push up','50x Ball slam @ 25#','25 cal Row / Airdyne','50x Bench press @ 95#','50x Box jump on tire','25x Back extension','50x Wall ball','25x GHD sit up','250m Row']]),
+W('Hummer','prog','',[['#4 rounds','30x KB swing','15x GHD sit up','30x Jumping pull up','25x Back extension','20x Deep KB squat (same KB as swings)','10x Push up']]),
+// ---------- RECOVERY ----------
+W('Winter in August','recovery','',[['Row 1000m, recovery pace','#25-20-15-10-5','Bench press @ 135#','Ankles to bar','Dip','Pull up (strict)','Row 1000m, recovery pace']]),
+W('Easy Flush (30-60 min)','recovery','',[['#30-60 min very low heart rate (<65% MHR), any low-impact movement','Cycle / elliptical / hike / row / stair master / swim / walk the dog']]),
+// ---------- ACCUMULATION ----------
+W('World War II','acc','',[['5x Sprint start (fwd) @ green band + 15x Parallette push up, x3','5x Sprint start (back) @ green band + 10x DL @ 135#, x3','20x Box jump @ 24" + 7x Clapping pull up, x3','10x KB get up (blindfolded) @ 35#']]),
+W('Stoplight','acc','',[['#~30 min','Team jerk ladder 5x 1-3 @ 75-80% BW (30 reps)','Team get up ladder 2x 1-4 each arm @ 53# KB (40 reps)','Team decline push up ladder 1-10-1 (100 reps)']]),
+W('Patron (Silver)','acc','',[['#(1) 1 min each, 3x (12 min), 53# KB never set down','KB round the world','KB figure 8','KB snatch','KB step up @ 10" box'],['#(2) 4x','10x Fat bar DL @ 105#+','30 sec Dead hang']]),
+W('The Elevator','acc','',[['20x Goblet squat @ 53# KB + 100m sprint','20x KB swing @ 53# + 100m sprint + 100m suitcase carry @ 2x 53#','20x Goblet squat @ 53# + 100m sprint + 100m suitcase carry @ 1x 53# + 1x "decide and throw"']]),
+W('Jagerbomb!','acc','',[['60m Farmer carry @ blaster bars, x4, rest as needed','10x Fat bar DL @ 105# + 60m Crosswalk @ 26# KB (high) & 53# KB (low), x3','5x Squat @ 135# + 10x Pull up, x10']]),
+W('Sumo Baby!','acc','',[['#(1) 4 rounds','6x DL','6x Bench press'],['#(2) 21-18-15-12-9-6-3','SDHP','Wall ball'],['#(3)','50x GHD sit up']]),
+// ---------- DENSITY ----------
+W('Purple Church','density','',[['#Every minute for 10 min','3x Power clean','3x Hang squat clean','3x Push press']]),
+W('Slab City','density','',[['#20 rounds (20 min)','30 sec KB swing','30 sec rest']]),
+W('Mad Dog 20/20','density','',[['#10 rounds (20 min)','30 sec Jingle jangles','30 sec rest']]),
+W('Thin Blue Line','density','',[['#Every 3 min for 6 rounds','10x Burpee','25m Bear crawl','25m Sled / tire drag','20x Sit up']]),
+W('300 Sux!','density','',[['#5 rounds','300m Shuttle','Rest 3 min']]),
+W('Wicked Hangover','density','',[['#(1)','Bench press max rep test @ 135#'],['#(2) 5x 1 min on / 30 sec off each; 1 min between exercises','Row',"Curtis P @ 55#",'Box jump @ 24"']]),
+// ---------- BREATHING LADDER ----------
+W('Breathing Ladder','ladder','',[['#1-20 (one breath per rep, add a rep each rung); 1-20-1; or 1-10 repeats. Stop when you can\'t hold the breath count.','Pick one: Ball slam / KB swing / KB snatch / KB 2-hand clean & squat / Thruster']]),
+// ---------- POWER ----------
+W('Explosive Power 1RM','power','explosive',[['1RM in one of: Clean, Push press, Jerk, Clean & jerk, Snatch']]),
+W("Not Now Chief, I'm in the Zone",'power','explosive',[['#5 rounds, 5 min rest between','3x DL @ 90-95% 1RM','3-6x Depth jump & broad jump combo chaser']]),
+W("Fuckin' Skanks",'power','explosive',[['#5 rounds, 5 min rest between','3x Weighted pull up @ 90-95% 1RM','3-6x Clapping pull up chaser']]),
+W('Mexicee Mishnun','power','cardio',[['500m Row — under 1:30','400m Run']]),
+W('HGH!!!','power','cardio',[['#3x, rest as needed','8x Front squat @ 70% 1RM','20m Sled drag @ 100#']]),
+W("Yeah, This Collar's Popped",'power','cardio',[['#3x, rest as needed','10x Goblet squat @ 71# KB','100m Sprint']]),
+// ---------- ENDURANCE ----------
+W('Speedball','endurance','',[['Speedball — minimum 1 hour game, no subs']]),
+W('Long Cardio (30-90 min)','endurance','',[['30-90 min: climb / cycle / hike / paddle / run / row / swim / ski / sport specific']]),
+// ---------- CIRCUITS: SHORT ----------
+W('Elizabeth','circuit','short',[['#21-15-9','Clean @ 135#','Ring dip']]),
+W('Grace','circuit','short',[['30x Clean & jerk @ 135# for time']]),
+W('Fran','circuit','short',[['#21-15-9','Thruster @ 95#','Pull up']]),
+W('Chelsea','circuit','short',[['#EMOM 30 min','5x Pull up','10x Push up','15x Squat']]),
+W('Helen','circuit','short',[['#3 rounds for time','400m Run','21x KB swing @ 53#','12x Pull up']]),
+W('Jackie','circuit','short',[['1000m Row','50x Thruster @ 45#','30x Pull up']]),
+W('Annie','circuit','short',[['#50-40-30-20-10','Double unders','Sit up']]),
+W('Bad Bush','circuit','short',[['#5 rounds','400m Run','10x Renegade man maker','1x Rope climb or 10x Pull up']]),
+W('PBR','circuit','short',[['#AMRAP 20 min','10x Front squat','10x Pull up','10x Weighted sit up','10x Push up']]),
+W('Over the Hills and Far Away','circuit','short',[['#10 rounds','10x DL','10x Ankles to bar','10x Dip']]),
+W("Joint's Up Committee",'circuit','short',[['#11 rounds','Row 250m','5x Ankles to bar','10x Push up','15x KB swing']]),
+W('Poopy Pants','circuit','short',[['#21-15-9','Thruster','Kipping pull up','#5 min rest, then 30-20-10','DL','Push press','#5 min rest, then 5 rounds','30 sec Jingle jangles','30 sec rest']]),
+W("I'm Trying to Get That Oil",'circuit','short',[['#Every minute for 10 min','3x Power clean','3x Hang squat clean','3x Push press']]),
+// ---------- CIRCUITS: COMPLEMENTARY ----------
+W('Horses Ass','circuit','comp',[['#30-20-10','DL @ 125% BW','HSPU']]),
+W('Jonestown Sprint','circuit','comp',[['#20-20-10-10','Burpee / pull up combo','Push press @ 75% BW']]),
+W('Jonesworthy','circuit','comp',[['Squat 80-64-48-32-24-12','KB swing 40-32-24-16-12-6','Pull up 20-16-12-8-6-3']]),
+W('Stairway to Heaven','circuit','comp',[['#50-40-30-20-10','KB step up @ 2x 35# KB @ 18" box','KTE']]),
+W('Louder Than 10','circuit','comp',[['#11 rounds','5x Ball slam','10x Push up','15x KB swing']]),
+W('When the Levy Breaks','circuit','comp',[['#5 rounds','15x DL @ BW','15x Ring push up']]),
+W('Johnny Walker Red','circuit','comp',[['#5 rounds','30m 1-arm overhead lunge @ 26# KB','2x Rope climb','20x GHD sit up']]),
+W('Johnny Walker Green','circuit','comp',[['#5 rounds','500m Row','Max reps Bench press @ 135#']]),
+W('Johnny Walker Blue','circuit','comp',[['#45-60 min','100x Pull up','30x Get up @ 25#','100x Push up','30x Get up @ 25#','100x Atomic sit up','30x Get up @ 25#','100x Air squat','30x Get up @ 25#']]),
+W('Johnny Walker Black','circuit','comp',[['#5 rounds','5x 2-arm KB clean @ 2x 53#','10x Ring push up','15x Squat']]),
+W('Ex Wives & Flat Tires','circuit','comp',[['#(1) 4 rounds','4x Front squat','4x Bench press','4x KB pull @ 2 KB'],['#(2) 8 rounds','12x DL @ 185#','6x Strict pull up','12x Elevated push up','12x Ball slam / box jump']]),
+W('Death to Infidels','circuit','comp',[['#(1) 5 rounds','3x Front squat','3x DB/KB military press'],['#(2) 5 rounds','15x Power clean @ 115#','15x Ring push up (feet above hands)'],['#(3) 5 rounds','10x Box jump @ 24"','5x Pull up','5x GHD sit up']]),
+// ---------- CIRCUITS: FOCUS ----------
+W('Titty Twister','circuit','focus',[['#(1) 20-15-10-5','Bench press','Dip','Pull up','Box jump'],['#(2) 10 rounds','5x Medicine ball toss & run','10x Push up','15x Swing']]),
+W('Appeal to God','circuit','focus',[['#3 rounds (24 min): 30 sec each, 30 sec rest with 5 perfect push ups','GHD sit up','V-sit','Static hold on rings (top of push up)','Tuck hang','Right plank','Front plank','Left plank','Vertical sit up']]),
+W('Slam Your Balls','circuit','focus',[['#30-20-10','Ball slam @ 25#','KB step up @ 2x 35# KB onto 20" box']]),
+W('Panama Red','circuit','focus',[['#10/1 - 9/2 - 8/3 … 1/10','Bench press @ BW','Burpee']]),
+W('Clockwork Orange','circuit','focus',[['#30-20-10','OHS @ 35% BW','Ring push up (feet higher than hands)']]),
+W('Flemingway','circuit','focus',[['Run 100m + 20x Ball slam @ 10#','Run 100m + 15x Ball slam @ 10#','Run 100m + 10x Ball slam @ 10#','Run 100m + 5x Ball slam @ 10#']]),
+W('Goosed','circuit','focus',[['#50-40-30-20-10','Wall ball @ 20#','Ball slam @ 20#']]),
+W('Fallen Angel / Torn Wings','circuit','focus',[['#3 rounds','10x DL @ 110-115% BW','400m Run']]),
+W('1775','circuit','focus',[['#4 rounds','17x Burpee / pull up combo','75x Squat']]),
+W('The Cog','circuit','focus',[['#3 rounds','250m Row','10x DL @ 125% BW','12x Thruster @ 2x 25# DB']]),
+W('Possum Stomper','circuit','focus',[['#5 rounds','50m 1-arm overhead lunge fwd @ 26# KB (weak side)','50m 1-arm overhead lunge back @ 26# KB (strong side)','400m Row']]),
+W('Linda','circuit','focus',[['#10-9-8-7-6-5-4-3-2-1','DL @ 1.5x BW','Bench press @ BW','Clean @ 0.75x BW']]),
+// ---------- JOB SPECIFIC ----------
+W('Pissed Off Girlfriend','job','long',[['#(1) 10 rounds','1 min Step up @ 20" box with weight','30 sec Iso squat hold','10 sec rest'],['#(2)','12 min of Turkish get up @ 35# KB'],['#(3) 10 rounds','1 min Jingle jangles','5x Box / depth jump combo','10 sec rest']]),
+W("D'yer Maker",'job','long',[['#Max rounds in 60 min','10x DL @ 135#','10x Sit up @ 45#','10x Push press @ 75#','10x KB swing @ 53#','6x Get up @ 45#']]),
+W('Cottage Cheese','job','short',[['#(1) 5 rounds','1 min Finger board','1 min rest'],['#(2) 4 rounds','25x Sledge swing on tire','1x Leg blaster']]),
+W('Enhance Your Freedom','job','short',[['#(1)','Choose a workout on the freedom enhancer'],['#(2)','5x 1-arm negatives (each arm)'],['#(3) 3 rounds','10x KTE','15x HSPU','20x Ankles to bar']]),
+W("Climber's Delight",'job','short',[['#(1)','5x System board ladder'],['#(2) 3 rounds','20x Windshield wipers','30x Dip','30x KTE','20x HSPU']]),
+W('Ode to the Regiment','job','long',[['#(1)','3 mile Ruck run @ 45# (minimum)'],['#(2) 3 rounds with ruck','50x Lunge','50x Dip','10x Pull up'],['#(3)','1 mile cool down run (no ruck)']]),
+W('Face Fuck','job','fuck',[['20x Leg blaster']]),
+W('Political Correctness','job','fuck',[['#(1) 4 rounds','8x Front squat','15x Bench sit up'],['#(2)','Weighted 1 mile run @ 25#','120x Weighted squat','60x Weighted push up','30x Strict pull up','Weighted 1 mile run @ 25#']]),
+W('PT Test','job','fuck',[['Max pull ups (min 15)','Max sit ups in 3 min (min 90)','Max push ups in 3 min (min 80)','3 mile run (22:30)','800m swim (14:30)']]),
+W('Pantaloon Hada','job','fuck',[['#(1)','Work up to 1RM DL'],['#(2)','3x1 @ 90% 1RM DL'],['#(3) 5 rounds','3x Power clean + HSC + mutant maker @ 95#','3x Sandbag get up @ 60#','30m Tire drag'],['#(4) 3 rounds','20x Lunge step @ 2x 24# KB','20x Dip']]),
+W('Sex Panther','job','fuck',[['#(1) 5 rounds','5x Power clean','5x Glute ham raise'],['#(2) 5 rounds','5x "The Exercise" (power snatch / OHS)','5x DB snatch (5 each hand)'],['#(3) 4 rounds','20 cal Airdyne / rower','5x Get up (each hand)']]),
+W('PT Test II','job','fuck',[['5 mile run (under 35:00)','10x BW Bench press','15x Pull up @ 25#']]),
+W('Massive Erection','job','fuck',[['#(1)',"Move all KB's in gym across room and back (lunging)"],['#(2) 5 rounds','10x Towel pull up',"15x Towel KB",'20x Towel halo','10x Fingertip push up','50m Farmer carry @ 2x 44#','50m KB bear crawl @ 2x 44#']]),
+W('Bill Brasky','job','fuck',[['50x Pull up / 250m Row (≤0:50)','40x KTE / 250m Row (≤0:50)','30x Windshield wipers / 250m Row (≤0:50)','20x Ankles to bar / 250m Row (≤0:55)','50x Air squat / 250m Row (≤0:55)','40x Jumping lunges / 250m Row (≤0:55)','30x Frog hop (depth jump) / 250m Row (≤1:00)','20x Jumping squat / 250m Row (≤0:50)','50x Push up / 50x Arm hauler','40x HSPU / 40x Dip','30x Mountain climber / 30x Burpee','20x 1-arm push up / 20x Double under']]),
+W("Roy'al With Cheese",'job','fuck',[['#3 min rest between exercises','15x Tire flip every min for 5 min','5x Sprint 100m (walk back)','30x Sledge swing on tire every min for 5 min','Towel KB halo @ 35# (30 on / 15 off) x5','2x Fast rope drag @ 2x 55# KB every min for 5 min','Heavy object throw 50m, carry back, x5','15-20x Goblet squat @ 71# KB every min for 5 min']]),
+W('The Gun Show','job','fuck',[['#(1) 10 rounds','Rope slam 30 sec','250m Row arms only, level 10 (under 1:25)','5x 1-arm push up (each arm)'],['#(2) 5 rounds','10x Close grip chin up','12x SDHP @ 95#','15x Diamond push up']]),
+W('Sometimes Gangsters Just Have to Bang Hammers','job','fuck',[['10x Strict pull up','20x HSPU','30x OHS @ 45#','40x Jumping lunges','500m Row (under 1:55)','60x KB swing @ 44#','70x DL @ 95#','80x Arm hauler','90x Sit up','100x Push up','90x Flutter kick','80x Sledge tire / mountain climber','70x Push press @ 65-75#','60x Ball slam @ 20#','500m Row (under 1:55)','40x KB snatch @ 44#','30x Box jump @ 20"','20x 1-arm push up','10x KB get up @ 53#']]),
+];
+
+// ---------- 4 MONTH SCHEDULE (28 days each) ----------
+// [category, sub, label]
+const T=(c,sub,l)=>({c,sub,l:l||(sub?H_CATS[c]+' ('+sub+')':H_CATS[c])});
+const REST={c:'rest',l:'Rest'}, REC=T('recovery','','Recovery');
+const H_MONTHS=[
+ {name:'Month 1 — Strength',days:[T('strength'),T('job','long'),T('pe'),T('smmf'),T('strength'),REC,REST, T('strength'),T('power','explosive'),T('job','fuck','Job Specific (FUCK!!!)'),T('pe'),T('strength'),REC,REST, T('strength'),T('power','cardio'),T('job','short'),T('prog','','Progression + Breathing Ladder (<30 min)'),T('strength'),REC,REST, T('strength'),T('pe'),T('job','long'),T('circuit','comp','Circuit (complementary)'),T('strength'),REC,REST]},
+ {name:'Month 2 — Power Endurance',days:[T('pe'),T('job','short'),T('strength','maint','Strength (maintenance)'),T('pe'),T('endurance','','Endurance (60+ min)'),REC,REST, T('pe'),T('circuit','focus','Circuit (focus)'),T('job','long'),T('pe'),T('strength','maint','Strength (maint.) + short sport specific'),T('strength','oly','Olympic lifting day (light, form)'),REST, T('pe'),T('strength','maint','Strength (maintenance)'),T('job','fuck','Job Specific (FUCK!!!)'),T('endurance','','Endurance (60+ min)'),T('pe','','Power Endurance + short circuit'),REC,REST, T('pe'),T('job','long'),T('strength','maint','Strength (maint.) + run'),T('prog'),T('pe'),T('smmf','','SMMF (light load)'),REST]},
+ {name:'Month 3 — Job Specific',days:[T('job','long'),T('strength'),T('job','short'),T('pe'),T('job','long'),REC,REST, T('job','fuck','Job Specific (FUCK!!!)'),T('circuit','short','Circuit (short)'),T('job','long'),T('job','short'),T('density'),REC,REST, T('job','long'),T('pe'),T('job','short'),T('smmf','','SMMF (light) + Progression (light)'),T('job','long'),REC,REST, T('job','fuck','Job Specific (FUCK!!!)'),T('endurance','','Endurance (30+ min)'),T('job','short'),T('strength'),T('job','long'),REC,REST]},
+ {name:'Month 4 — Maintenance',days:[T('circuit','short','Circuit (short)'),T('strength'),REC,T('job','fuck','Job Specific (FUCK!!!)'),T('prog'),REC,REST, T('circuit','comp','Circuit (complementary)'),T('strength'),REC,T('job','fuck','Job Specific (FUCK!!!)'),T('smmf','','SMMF (light, form)'),REC,REST, T('circuit','focus','Circuit (focus)'),T('job','fuck','Job Specific (FUCK!!!)'),REC,T('strength'),T('acc'),REC,REST, T('endurance','','Endurance (60+ min)'),T('job','fuck','Job Specific (FUCK!!!)'),REC,T('strength'),T('circuit','short','Circuit (short)'),REC,REST]},
+];
+
+// ---------- SCALING ----------
+// Scaled ≈ regression, RX = as written, RX+ = heavier / harder.
+const H_SUBS=[ // [regex, scaled, rx+]
+ [/\bstrict pull ups?\b/i,'band-assisted strict pull ups','weighted strict pull ups (+25#)'],
+ [/\bweighted pull ups?\b/i,'strict pull ups','weighted pull ups (heavier)'],
+ [/\bkip(?:ping)? pull ups?\b/i,'jumping pull ups','chest-to-bar kipping pull ups'],
+ [/\bjumping pull ups?\b/i,'ring rows','strict pull ups'],
+ [/\bclapping pull ups?\b/i,'kipping pull ups','bar muscle ups'],
+ [/\btowel pull ups?\b/i,'towel ring rows','weighted towel pull ups'],
+ [/\bclose grip chin ups?\b/i,'band-assisted chin ups','weighted chin ups'],
+ [/\bpull ups?\b/i,'ring rows / band-assisted pull ups','weighted pull ups (+25#)'],
+ [/\bHSPU\b/,'pike push ups (feet on box)','deficit HSPU'],
+ [/\brope climbs?\b/i,'rope pulls from floor to stand','legless rope climb'],
+ [/\bring push ups?\b/i,'push ups','feet-elevated ring push ups'],
+ [/\belevated push ups?\b/i,'push ups','ring push ups, feet elevated'],
+ [/\bclapping push ups?\b/i,'fast push ups','plyo push ups onto plates'],
+ [/\bplyo push ups?\b/i,'fast push ups','clapping push ups'],
+ [/\b1-arm push ups?\b/i,'archer push ups','1-arm push ups, feet together'],
+ [/\bfingertip push ups?\b/i,'knuckle push ups','fingertip push ups, feet elevated'],
+ [/\bdiamond push ups?\b/i,'close-grip push ups on knees','deficit diamond push ups'],
+ [/\bpush ups?\b/i,'incline / knee push ups','weighted push ups (+25# plate)'],
+ [/\bring dips?\b/i,'bench dips','weighted ring dips'],
+ [/\bdips?\b/i,'bench dips / band-assisted dips','weighted dips (+25#)'],
+ [/\bburpee \/ pull up combo\b/i,'burpee + ring row','burpee + chest-to-bar'],
+ [/\bburpees?\b/i,'step-back burpees','burpees over bar'],
+ [/\bjumping lunges\b/i,'walking lunges','weighted jumping lunges (vest)'],
+ [/\bjumping squats?\b/i,'air squats','weighted squat jumps'],
+ [/\bdouble unders?\b/i,'single unders x3','triple unders'],
+ [/\bGHD sit ups?\b/i,'AbMat sit ups','weighted GHD sit ups'],
+ [/\bglute ham sit ups?\b/i,'AbMat sit ups','weighted glute ham sit ups'],
+ [/\bglute ham raises?\b/i,'band-assisted GHR / Nordic negatives','weighted glute ham raise'],
+ [/\bankles to bar\b/i,'knees to elbows','strict toes to bar'],
+ [/\bKTE\b/,'hanging knee raises','toes to bar'],
+ [/\bwindshield wipers\b/i,'lying windshield wipers','weighted windshield wipers'],
+ [/\bbox jumps?\b(?! @)/i,'step ups','box jumps (higher box, 30")'],
+ [/\bdepth jumps?\b/i,'box jumps','depth jump from 30"+'],
+ [/\bsled push\b/i,'light sled push','sled push, +50%'],
+ [/\btire drag\b/i,'light tire drag','tire drag with added plate'],
+ [/\bbear crawl\b/i,'bear crawl (short)','bear crawl with sled'],
+ [/\bDB crawl\b/i,'bear crawl (no DB)','DB crawl, heavier DBs'],
+ [/\bhandstand\b/i,'wall-facing handstand hold','freestanding handstand'],
+ [/\bstatic hold on rings\b/i,'static hold on parallettes','ring support with turnout, feet elevated'],
+ [/\btuck hang\b/i,'knee raise hold','L-sit hang'],
+ [/\bL-sit\b/i,'tuck hold','weighted L-sit'],
+ [/\bmuscle ups?\b/i,'chest-to-bar + dip','weighted muscle ups'],
+ [/\bsprint\b/i,'hard run','sprint with 20# vest'],
+ [/\b(\d+)m run\b/i,'$1m run (jog) or equal row','$1m run with 20# vest'],
+ [/\brun (\d+)m\b/i,'run $1m (jog) or equal row','run $1m with 20# vest'],
+ [/\b(\d+) mile run\b/i,'$1 mile run (easy) or equal row','$1 mile run with 20# vest'],
+ [/\bruck run\b/i,'ruck walk','ruck run (+15#)'],
+];
+const r5=x=>Math.max(5,Math.round(x/5)*5);
+function hScaleLine(line,mode){
+  if(mode==='rx'||line.startsWith('#')) return line;
+  const f=mode==='scaled'?0.7:1.2;
+  let s=line;
+  // pounds: "53#", "2x 35#", "85-95#"
+  s=s.replace(/(\d+)(?:-(\d+))?#/g,(m,a,b)=>b?`${r5(+a*f)}-${r5(+b*f)}#`:`${r5(+a*f)}#`);
+  // % of 1RM / BW percentages
+  s=s.replace(/(\d+)(?:-(\d+))?%/g,(m,a,b)=>{const d=mode==='scaled'?-10:5; return b?`${+a+d}-${+b+d}%`:`${+a+d}%`;});
+  // BW multiples
+  s=s.replace(/(\d*\.?\d+)x BW/gi,(m,a)=>`${Math.round(+a*f*100)/100}x BW`);
+  s=s.replace(/@ BW\b/g,mode==='scaled'?'@ 0.7x BW':'@ 1.2x BW');
+  // box heights
+  s=s.replace(/(\d+)"/g,(m,a)=>`${mode==='scaled'?Math.max(12,+a-4):+a+6}"`);
+  // movement substitutions
+  for(const [re,sc,rp] of H_SUBS){ if(re.test(s)){ s=s.replace(re,mode==='scaled'?sc:rp); break; } }
+  return s;
+}
