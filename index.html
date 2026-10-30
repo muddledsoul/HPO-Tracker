@@ -148,6 +148,18 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .ubtn.band{border-style:dashed;color:var(--green)}
 .rrow.bandrow{grid-template-columns:18px 1fr 96px 54px 44px}
 .rrow.bandrow input[type=text]{font-size:14px;text-align:left;padding:9px 6px}
+
+.home{min-height:calc(100vh - 40px);display:flex;flex-direction:column;justify-content:center;padding-bottom:40px}
+.motto{font-size:72px;line-height:.9;font-weight:800;letter-spacing:-.03em;margin:0 0 28px;text-transform:uppercase;color:var(--ink)}
+.motto::after{content:"";display:block;width:80px;height:8px;background:var(--accent);margin-top:18px}
+.home .sub{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);margin:0 0 8px}
+.pcard{display:block;width:100%;text-align:left;background:var(--ink);color:#fff;border-radius:var(--r);padding:16px;margin:8px 0}
+.pcard .pn{display:block;font-size:24px;font-weight:800;line-height:1}
+.pcard .pd{display:block;font-size:14px;color:#B9C3BF;margin:6px 0 12px}
+.pcard .bar{display:block;height:6px;background:#3A4642;border-radius:3px;overflow:hidden}
+.pcard .bar i{display:block;height:100%;background:var(--accent)}
+.pcard .pm{display:block;font-size:13px;color:#B9C3BF;margin:6px 0 10px;font-variant-numeric:tabular-nums}
+.pcard .pnx{display:block;font-size:16px;font-weight:800;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -308,6 +320,7 @@ const PROGRAM = {
     [E('Barbell Walking Lunges','STD','e'),E('Barbell Bent Over Row','MAIN4'),E('T-Spine Open Book Stretch','STR','e')],
     [E('Lunge Position Stability Lift','STD','e'),E('Hand Release Push Ups (max in 1:00 wk 23-24)','HRPU'),E('Pinch Grip Walking Single Dumbbell Hold','C40','e')]]]],
 };
+const PROGRAMS=[{id:'hpo',name:'24-Week HPO Program',desc:'4 phases × 6 weeks · 4/3/2-day lifting plans + ESD running'}];
 const PLAN_INFO = {'4':'4 Day (strength priority)','3':'3 Day (progressive)','2':'2 Day (ESD priority)'};
 const PREP = [
   {pillar:['Glute foam roll 30s ea','T-spine foam roll 30s','Lat foam roll 30s ea','Roller hip flexor stretch 5-10 breaths ea','Standing figure-4 hip stretch 5-10 breaths ea'],
@@ -362,7 +375,7 @@ let storageOK=false, saveT=null;
 async function load(){
   try{ const t=localStorage.getItem(KEY); if(t){ Object.assign(S,JSON.parse(t)); } localStorage.setItem(KEY+'-probe','1'); storageOK=true; }
   catch(e){ try{ const r=await window.storage.get(KEY,false); if(r&&r.value) Object.assign(S,JSON.parse(r.value)); storageOK=true; }catch(e2){ storageOK=false; } }
-  goNext();
+  goNext(); S.tab='home';
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
   if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
   render();
@@ -442,8 +455,9 @@ function toggleExUnit(name){ const from=exUnit(name), to=from==='lb'?'kg':'lb'; 
 /* ============================ RENDER ============================ */
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML = {train:vTrain,program:vProgram,run:vRun,prs:vPRs,progress:vProgress,more:vMore}[S.tab]();
-  const tabs=[['train','Train'],['program','Program'],['run','Run'],['prs','PRs'],['progress','Progress'],['more','More']];
+  app.innerHTML = {home:vHome,train:vTrain,program:vProgram,run:vRun,prs:vPRs,progress:vProgress,more:vMore}[S.tab]();
+  const tabs=[['home','Home'],['train','Train'],['program','Program'],['run','Run'],['prs','PRs'],['progress','Progress'],['more','More']];
+  document.getElementById('tabs').style.display=S.tab==='home'?'none':'';
   document.getElementById('tabs').innerHTML=tabs.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
   updateStatus();
 }
@@ -461,6 +475,18 @@ function weekStrip(){
 }
 function header(sub){ return `<div class="top"><h1>Week ${S.week}<small>Phase ${ROMAN[phaseOf(S.week)-1]} of IV — ${sub}</small></h1><span class="chip" id="status"></span></div>`; }
 
+
+function vHome(){
+  const total=[...Array(24)].reduce((a,_,i)=>a+days(planFor(i+1)),0);
+  const done=Object.values(S.sessions).filter(x=>x.done).length;
+  const nx=nextWorkout(), pct=Math.round(done/total*100);
+  let h=`<div class="home"><h1 class="motto">Don't Be<br>a Bitch</h1><p class="sub">Your programs</p>`;
+  PROGRAMS.forEach(pr=>{
+    h+=`<button class="pcard" onclick="goNext();save();render();window.scrollTo(0,0)"><span class="pn">${pr.name}</span><span class="pd">${pr.desc}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="pm">${done} / ${total} sessions · ${pct}%</span><span class="pnx">Up next: Week ${nx.w} · Day ${nx.d} (${planFor(nx.w)} Day) →</span></button>`;
+  });
+  h+=`<p class="help" style="margin-top:18px">More programs can be added here as you load them in.</p></div>`;
+  return h;
+}
 function vTrain(){
   const p=planFor(S.week),w=S.week,d=S.day, list=exList(p,w,d), ss=session(p,w,d)||{sets:{},notes:'',done:false}, i=wip(w);
   let h=header(PLAN_INFO[p]+(nextWorkout().w===w&&nextWorkout().d===d?' · up next':''));
