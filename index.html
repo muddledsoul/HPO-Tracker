@@ -369,14 +369,14 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.10';
 let S = {plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
   try{ const t=localStorage.getItem(KEY); if(t){ Object.assign(S,JSON.parse(t)); } localStorage.setItem(KEY+'-probe','1'); storageOK=true; }
   catch(e){ try{ const r=await window.storage.get(KEY,false); if(r&&r.value) Object.assign(S,JSON.parse(r.value)); storageOK=true; }catch(e2){ storageOK=false; } }
   goNext(); S.tab='home';
-  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js'); }catch(e){} }
+  if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').then(reg=>{ reg.update(); reg.addEventListener('updatefound',()=>{ const nw=reg.installing; nw&&nw.addEventListener('statechange',()=>{ if(nw.state==='activated'&&!window.__reloaded){ window.__reloaded=1; toast('Updating…'); setTimeout(()=>location.reload(),600); } }); }); }); }catch(e){} }
   if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
   render();
 }
@@ -642,9 +642,10 @@ function vMore(){
   h+=`<textarea class="io" id="expText" style="margin-top:10px;display:none"></textarea>`;
   h+=`<h2 class="sec">Lock</h2><button class="btn ghost" onclick="lock()">Lock app (ask for password again)</button>
 <h2 class="sec">Reset</h2><button class="btn danger" style="width:auto" onclick="if(confirm('Delete all logged sessions, runs and tests?')){S.sessions={};S.runs={};S.tests=[];save();render();}">Delete all data</button>`;
-  h+=`<h2 class="sec">About</h2><p class="help">24-week program: 4 phases × 6 weeks, three training-day plans plus the ESD running calendar. Blocks are supersets. Show up healthy.</p>`;
+  h+=`<h2 class="sec">About</h2><p class="help">Version ${APP_VERSION}. <button class="segbtn" onclick="checkUpdate()">Check for update</button><br>24-week program: 4 phases × 6 weeks, three training-day plans plus the ESD running calendar. Blocks are supersets. Show up healthy.</p>`;
   return h;
 }
+function checkUpdate(){ if(!('serviceWorker' in navigator)){ location.reload(); return; } navigator.serviceWorker.getRegistration().then(r=>{ if(!r){ location.reload(); return; } r.update().then(()=>{ setTimeout(()=>{ if(!window.__reloaded){ toast('Up to date'); } },2500); }); }); }
 function exportData(){ const t=JSON.stringify(S); try{ const b=new Blob([t],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='hpo-backup-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove(); toast('Backup file ready'); }catch(e){ const ta=document.getElementById('expText'); ta.style.display='block'; ta.value=t; ta.select(); toast('Select and copy the text'); } }
 function importFile(inp){ const f=inp.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ document.getElementById('impText').value=r.result; importData(); }; r.readAsText(f); }
 function importData(){ try{ const o=JSON.parse(document.getElementById('impText').value); if(!o.sessions) throw 0; Object.assign(S,o); save(); render(); toast('Restored'); }catch(e){ toast('That backup could not be read'); } }
