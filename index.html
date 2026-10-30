@@ -217,6 +217,7 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .lhow{margin:4px 0 10px;font-size:15px;line-height:1.35}
 .btn.lrun{background:var(--accent);color:#fff;border-color:var(--accent);font-variant-numeric:tabular-nums}
 .limp{font-size:13px;font-weight:700;color:var(--green);margin:-2px 0 4px}
+.segbtn.pg{border-style:dashed;color:var(--ink2)} a.segbtn{text-decoration:none;display:inline-flex;align-items:center}
 </style>
 </head>
 <body>
@@ -429,7 +430,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.17';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.18';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -649,7 +650,7 @@ function lMobCard(a,mi,m){ const key=a.id+'-'+mi, done=lDoneToday(a.id,mi), runn
   <div class="sub"><span>${esc(m.tool)} · <b>${esc(m.dose)}</b></span><span class="pr">${m.m.map(k=>L_METHODS[k][0]).join(' · ')}</span></div>
   ${m.imp?`<div class="limp">Improves: ${esc(m.imp)}</div>`:''}
   <p class="lhow">${esc(m.how)}</p>
-  <div class="row"><button class="btn ghost ${running?'lrun':''}" onclick="lStart('${key}',120)">${running?`<span id="lt-${key}">${fmtDur(lTimerLeft*1000)}</span> · stop`:'▶ 2:00 timer'}</button><button class="segbtn" onclick="lMethod('${m.m.join(',')}')">how?</button></div></div>`; }
+  <div class="row"><button class="btn ghost ${running?'lrun':''}" onclick="lStart('${key}',120)">${running?`<span id="lt-${key}">${fmtDur(lTimerLeft*1000)}</span> · stop`:'▶ 2:00 timer'}</button><button class="segbtn" onclick="lMethod('${m.m.join(',')}')">how?</button><a class="segbtn" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent('Kelly Starrett '+m.n)}">▶ video</a>${m.pg?`<span class="segbtn pg">Book p.${m.pg}</span>`:''}</div></div>`; }
 function lMethod(keys){ const sheet=document.getElementById('sheet'); sheet.innerHTML=`<div class="sh">${keys.split(',').map(k=>`<h3>${L_METHODS[k][0]}</h3><p>${esc(L_METHODS[k][1])}</p>`).join('')}<button class="btn" onclick="document.getElementById('sheet').classList.remove('open')">Close</button></div>`; sheet.classList.add('open'); }
 function vLFix(){
   let h=`<div class="top"><h1>What hurts?<small>Supple Leopard — pick a spot</small></h1><span class="chip" id="status"></span></div>`;
