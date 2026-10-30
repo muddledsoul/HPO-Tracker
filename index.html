@@ -199,10 +199,14 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .oneRM input{width:100%;padding:8px 6px;border:2px solid var(--accent);border-radius:var(--r);background:#fff;font-size:18px;font-weight:800;text-align:center}
 .oneRM small{grid-column:1/-1;color:var(--ink2);font-size:12px}
 .maxes i{font-style:normal;font-size:11px;color:var(--accent-ink);font-weight:800}
+
+.install{margin-top:34px;max-width:320px;width:100%;border-top:1px solid #3A4642;padding-top:16px;font-size:14px;color:#B9C3BF;display:grid;gap:8px}
+.install b{color:#fff;font-size:15px}
+.install i{font-style:normal;font-weight:800;color:var(--accent);margin-right:6px}
 </style>
 </head>
 <body>
-<div class="gate" id="gate"><h1>HPO</h1><p>Enter password</p><form onsubmit="return unlock(event)"><input id="pw" type="password" autocomplete="current-password" autofocus><button type="submit">Unlock</button></form><div class="err" id="pwerr"></div></div>
+<div class="gate" id="gate"><h1>HPO</h1><p>Enter password</p><form onsubmit="return unlock(event)"><input id="pw" type="password" autocomplete="current-password" autofocus><button type="submit">Unlock</button></form><div class="err" id="pwerr"></div><div class="install" id="install"><b>Add to your home screen</b><span><i>iPhone</i> Open in Safari → tap Share (box with arrow) → Add to Home Screen → Add.</span><span><i>Android</i> Open in Chrome → ⋮ menu → Add to Home screen (or Install app) → Add.</span></div></div>
 <div id="app"></div>
 <div class="sheet" id="sheet" onclick="if(event.target===this)this.classList.remove('open')"></div>
 <nav class="tabs" id="tabs"></nav>
@@ -410,7 +414,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.14';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.15';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
