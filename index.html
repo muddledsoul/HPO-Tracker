@@ -174,6 +174,13 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .hlog label{display:block;font-size:13px;color:var(--ink2);font-weight:600;margin-bottom:4px}
 .hlog input{width:100%;padding:10px;border:2px solid var(--line);border-radius:var(--r);background:#fff;font-size:20px;font-weight:700}
 .weekstrip button.rest{opacity:.45}
+
+.calc{display:inline-block;margin-left:8px;font-size:13px;font-weight:800;color:var(--accent-ink);background:#FDE7DA;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.calc.miss{background:var(--bg);color:var(--ink2);font-weight:700}
+.maxes{background:var(--panel);border:2px dashed var(--line);border-radius:var(--r);padding:8px 10px;margin:8px 0;display:grid;grid-template-columns:1fr 1fr;gap:6px 10px}
+.maxes .mh{grid-column:1/-1;font-size:12px;font-weight:800;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em}
+.maxes label{display:grid;grid-template-columns:1fr 76px;align-items:center;gap:6px;font-size:14px;font-weight:600}
+.maxes input{width:100%;padding:7px 6px;border:2px solid var(--line);border-radius:var(--r);background:#fff;font-size:17px;font-weight:700;text-align:center}
 </style>
 </head>
 <body>
@@ -384,7 +391,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.11';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.12';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -505,12 +512,36 @@ function hUsed(n){ return Object.values(S.h.days).filter(x=>x.wo===n&&x.done).le
 function hHistory(n){ const out=[]; for(const k in S.h.days){ const x=S.h.days[k]; if(x.wo===n&&x.done) out.push(Object.assign({k},x)); } return out.sort((a,b)=>(b.date||'').localeCompare(a.date||'')); }
 function tSec(t){ const m=String(t||'').match(/^(\d+):(\d\d)$/); return m?+m[1]*60+ +m[2]:null; }
 function hBest(n){ const h=hHistory(n); if(!h.length) return null; const times=h.filter(x=>tSec(x.time)!=null).sort((a,b)=>tSec(a.time)-tSec(b.time)); const scores=h.filter(x=>x.score!==''&&x.score!=null&&!isNaN(+x.score)).sort((a,b)=>+b.score-+a.score); return {time:times[0],score:scores[0],n:h.length,last:h[0]}; }
+
+/* ---- 1RM maxes & % calculations ---- */
+const H_LIFTS=[['clean squat & push press',['clean squat & push press','clean squat and push press']],['weighted pull up',['weighted pull up','weighted pull ups']],['squat clean',['squat clean','clean & squat','clean and squat','clean squat']],['power snatch',['power snatch']],['power clean',['power clean']],['push press',['push press']],['front squat',['front squat']],['back squat',['back squat','squat']],['bench press',['bench press','bench']],['deadlift',['dl','deadlift','dead lift','trap bar dl']],['press',['standing press','military press','standing military press','overhead press','strict press','press']],['jerk',['jerk from rack','power jerk','jerk']],['clean pull',['clean pull']],['good morning',['good morning']],['overhead squat',['ohs','overhead squat']],['thruster',['thruster']],['snatch',['snatch']],['clean',['clean']]];
+function hLift(line){ let t=line.toLowerCase().replace(/^\s*\d+(?:-\d+)?x\s*/,'').replace(/^work up to 1rm\s*/,'').replace(/^1rm\s*/,'').replace(/^3x1\s*@\s*\d+% 1rm\s*/,'').split(/ @ | — | \(|,|\//)[0].trim(); for(const [c,al] of H_LIFTS){ for(const a of al){ if(t===a||t.endsWith(' '+a)||t.startsWith(a+' ')||t===a+'s') return c; } } for(const [c,al] of H_LIFTS){ for(const a of al){ if(t.includes(a)) return c; } } return null; }
+function hMax(l){ return (S.h.maxes||{})[l]; }
+function hSetMax(l,v){ S.h.maxes=S.h.maxes||{}; if(v===''||isNaN(+v)) delete S.h.maxes[l]; else S.h.maxes[l]=+v; save(); render(); }
+function hSetBW(v){ S.bw=v===''?null:+v; save(); render(); }
+function hCalc(txt){ // returns html chip for computed loads, or ''
+  const bw=/\bBW\b/.test(txt), lift=bw?null:hLift(txt), base=bw?S.bw:(lift?hMax(lift):null);
+  const outs=[]; const pct=[...txt.matchAll(/(\d+)(?:-(\d+))?%/g)]; const mult=[...txt.matchAll(/(\d*\.?\d+)x BW/gi)];
+  if(!pct.length&&!mult.length&&!/@ BW\b/.test(txt)) return '';
+  if(!base) return `<span class="calc miss">${bw?'set bodyweight':lift?'set 1RM '+lift:'1RM?'}</span>`;
+  pct.forEach(m=>outs.push(m[2]?`${r5(base*m[1]/100)}-${r5(base*m[2]/100)}`:`${r5(base*m[1]/100)}`));
+  mult.forEach(m=>outs.push(`${r5(base*+m[1])}`));
+  if(/@ BW\b/.test(txt)) outs.push(`${r5(base)}`);
+  return `<span class="calc">= ${outs.join(' · ')}#</span>`; }
+function hMaxPanel(w){ // inputs for every lift referenced by %/1RM in this workout, plus BW if used
+  const lifts=new Set(); let bw=false;
+  (w.b||[]).flat().forEach(l=>{ if(l.startsWith('#')) return; if(/\bBW\b/.test(l)) bw=true; if(/%|1RM/i.test(l)){ const c=hLift(l); if(c) lifts.add(c); } });
+  if(!lifts.size&&!bw) return '';
+  let h='<div class="maxes"><div class="mh">Your maxes</div>';
+  [...lifts].forEach(l=>{ h+=`<label><span>1RM ${l}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value)"></label>`; });
+  if(bw) h+=`<label><span>Bodyweight</span><input type="number" inputmode="decimal" value="${S.bw??''}" placeholder="lb" onchange="hSetBW(this.value)"></label>`;
+  return h+'</div>'; }
 const SCALES=[['scaled','Scaled'],['rx','RX'],['rxp','RX+']];
 function hSetScale(sc){ const x=hEnsure(S.h.m,S.h.d); x.scale=sc; x.ov={}; save(); render(); }
 function hCycle(idx){ const x=hEnsure(S.h.m,S.h.d); x.ov=x.ov||{}; const cur=x.ov[idx]||x.scale||'rx'; const i=SCALES.findIndex(z=>z[0]===cur); x.ov[idx]=SCALES[(i+1)%3][0]; save(); render(); }
 function hSet(f,v){ const x=hEnsure(S.h.m,S.h.d); x[f]=v; if(!x.date) x.date=new Date().toISOString(); save(); if(f==='wo'||f==='warm') render(); }
 function hFinish(){ const x=hEnsure(S.h.m,S.h.d); x.done=!x.done; if(x.done){ x.date=x.date||new Date().toISOString(); if(!x.scale) x.scale='rx'; toast('Logged — next day loaded'); save(); hGoNext(); render(); window.scrollTo(0,0); return; } save(); render(); }
-function hLines(w,scale,ov){ let idx=0, h=''; (w.b||[]).forEach(blk=>{ h+='<div class="hblk">'; blk.forEach(line=>{ if(line.startsWith('#')){ h+=`<div class="hh">${esc(line.slice(1))}</div>`; return; } const i=idx++; const sc=(ov&&ov[i])||scale; const txt=hScaleLine(line,sc); h+=`<button class="hl ${sc}" onclick="hCycle(${i})"><span>${esc(txt)}</span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button>`; }); h+='</div>'; }); return h; }
+function hLines(w,scale,ov){ let idx=0, h=''; (w.b||[]).forEach(blk=>{ h+='<div class="hblk">'; blk.forEach(line=>{ if(line.startsWith('#')){ h+=`<div class="hh">${esc(line.slice(1))}</div>`; return; } const i=idx++; const sc=(ov&&ov[i])||scale; const txt=hScaleLine(line,sc); h+=`<button class="hl ${sc}" onclick="hCycle(${i})"><span>${esc(txt)}${hCalc(txt)}</span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button>`; }); h+='</div>'; }); return h; }
 function hStrip(){ const m=S.h.m; let h='<div class="weekstrip">'; for(let d=1;d<=28;d++){ const t=hType(m,d), x=hDay(m,d); const cls=t.c==='rest'?'rest':''; h+=`<button class="${d===S.h.d?'cur':''} ${x?.done?'done':''} ${cls}" onclick="S.h.d=${d};save();render()">${d}</button>`; } return h+'</div>'; }
 function vHDay(){
   const m=S.h.m,d=S.h.d,t=hType(m,d), x=hDay(m,d)||{}, nx=hNext();
@@ -531,6 +562,7 @@ function vHDay(){
     const b=hBest(wo.n);
     h+=`<div class="ex"><h3>${esc(wo.n)}</h3><div class="sub"><span>${H_CATS[wo.c]}${wo.sub?' · '+wo.sub:''}${b?` · done ${b.n}×`:''}</span><span class="pr">${b?.time?`Best ${b.time.time} (${b.time.scale==='rxp'?'RX+':b.time.scale==='scaled'?'Scaled':'RX'})`:b?.score?`Best ${b.score.score}`:''}</span></div>`;
     h+=`<div class="chips">${SCALES.map(([k,l])=>`<button class="chip ${scale===k?'on':''}" onclick="hSetScale('${k}')">${l}</button>`).join('')}<span style="font-size:12px;color:var(--ink2);align-self:center">tap a line to change just that movement</span></div>`;
+    h+=hMaxPanel(wo);
     h+=hLines(wo,scale,x.ov);
     h+=`</div>`;
     h+=`<div class="hlog"><div><label>Time (mm:ss)</label><input placeholder="12:34" value="${esc(x.time||'')}" onchange="hSet('time',this.value)"></div><div><label>Score / rounds / reps</label><input inputmode="decimal" placeholder="e.g. 187" value="${esc(x.score??'')}" onchange="hSet('score',this.value)"></div></div>`;
@@ -717,7 +749,8 @@ function drawChart(pts){
 function vMore(){
   let h=header('settings & backup');
   h+=`<h2 class="sec">Default unit</h2><p class="help">Tap the lb/kg tag next to any exercise on Train to set its own unit (logged weights convert). This is only the default for lifts you have not set.</p><div class="chips"><button class="chip ${S.unit==='lb'?'on':''}" onclick="S.unit='lb';save();render()">lb</button><button class="chip ${S.unit==='kg'?'on':''}" onclick="S.unit='kg';save();render()">kg</button></div>`;
-  h+=`<h2 class="sec">Backup</h2><p class="help">Your log is stored on this phone and survives closing the app and reboots${storageOK?'':' (saving is currently unavailable — export now to keep your log)'}. Export a copy any time and paste it back to restore or move devices.</p>`;
+  h+=`<h2 class="sec">Bodyweight &amp; 1RMs</h2><p class="help">Used to calculate %-based loads in 4 Horsemen. Update after a new max.</p><div class="maxes"><label><span>Bodyweight</span><input type="number" inputmode="decimal" value="${S.bw??''}" placeholder="lb" onchange="hSetBW(this.value)"></label>${H_LIFTS.map(([l])=>`<label><span>1RM ${l}</span><input type="number" inputmode="decimal" value="${hMax(l)??''}" placeholder="lb" onchange="hSetMax('${l}',this.value)"></label>`).join('')}</div>
+  <h2 class="sec">Backup</h2><p class="help">Your log is stored on this phone and survives closing the app and reboots${storageOK?'':' (saving is currently unavailable — export now to keep your log)'}. Export a copy any time and paste it back to restore or move devices.</p>`;
   h+=`<div class="row"><button class="btn ghost" onclick="exportData()">Save backup file</button><button class="btn ghost" onclick="document.getElementById('imp').style.display='block'">Restore from backup</button></div>`;
   h+=`<div id="imp" style="display:none;margin-top:10px"><input type="file" accept=".json,application/json" onchange="importFile(this)" style="margin-bottom:8px"><textarea class="io" id="impText" placeholder="Paste backup JSON here"></textarea><button class="btn ghost" onclick="importData()">Restore</button></div>`;
   h+=`<textarea class="io" id="expText" style="margin-top:10px;display:none"></textarea>`;
