@@ -203,6 +203,19 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .install{margin-top:34px;max-width:320px;width:100%;border-top:1px solid #3A4642;padding-top:16px;font-size:14px;color:#B9C3BF;display:grid;gap:8px}
 .install b{color:#fff;font-size:15px}
 .install i{font-style:normal;font-weight:800;color:var(--accent);margin-right:6px}
+
+.paingrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
+.pain{padding:12px 6px;border-radius:var(--r);background:var(--panel);border:2px solid var(--line);font-weight:700;font-size:15px}
+.pain.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.lnote{background:var(--ink);color:#fff;border-radius:var(--r);padding:12px;margin:12px 0 4px}
+.lnote b{font-size:20px;display:block;margin-bottom:4px}
+.lnote p{margin:0;color:#B9C3BF;font-size:15px}
+.lmob .lhead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lmob .tick{width:44px;height:44px;border-radius:var(--r);border:2px solid var(--line);background:#fff;font-size:20px;font-weight:800;color:transparent;flex:0 0 auto}
+.lmob .tick.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.lmob.ldone{border-left:6px solid var(--accent)}
+.lhow{margin:4px 0 10px;font-size:15px;line-height:1.35}
+.btn.lrun{background:var(--accent);color:#fff;border-color:var(--accent);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -212,6 +225,7 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 <nav class="tabs" id="tabs"></nav>
 <div class="toast" id="toast"></div>
 <script src="horsemen.js"></script>
+<script src="leopard.js"></script>
 <script>
 /* ============================ PROGRAM DATA ============================ */
 // Set targets per week-in-phase (6 weeks). [reps, rpe]
@@ -365,7 +379,7 @@ const PROGRAM = {
     [E('Barbell Walking Lunges','STD','e'),E('Barbell Bent Over Row','MAIN4'),E('T-Spine Open Book Stretch','STR','e')],
     [E('Lunge Position Stability Lift','STD','e'),E('Hand Release Push Ups (max in 1:00 wk 23-24)','HRPU'),E('Pinch Grip Walking Single Dumbbell Hold','C40','e')]]]],
 };
-const PROGRAMS=[{id:'hpo',name:'24-Week HPO Program',desc:'4 phases × 6 weeks · 4/3/2-day lifting plans + ESD running'},{id:'h',name:'4 Horsemen',desc:'4 months × 28 days · operator base: strength, power endurance, job specific, maintenance'}];
+const PROGRAMS=[{id:'hpo',name:'24-Week HPO Program',desc:'4 phases × 6 weeks · 4/3/2-day lifting plans + ESD running'},{id:'h',name:'4 Horsemen',desc:'4 months × 28 days · operator base: strength, power endurance, job specific, maintenance'},{id:'l',name:'Supple Leopard — Mobility',desc:'Tap what hurts → 2-minute mobilizations up and down the chain · 13 body areas'}];
 const PLAN_INFO = {'4':'4 Day (strength priority)','3':'3 Day (progressive)','2':'2 Day (ESD priority)'};
 const PREP = [
   {pillar:['Glute foam roll 30s ea','T-spine foam roll 30s','Lat foam roll 30s ea','Roller hip flexor stretch 5-10 breaths ea','Standing figure-4 hip stretch 5-10 breaths ea'],
@@ -414,13 +428,13 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.15';
-let S = {prog:'hpo',h:{days:{},m:1,d:1},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.16';
+let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
   try{ const t=localStorage.getItem(KEY); if(t){ Object.assign(S,JSON.parse(t)); } localStorage.setItem(KEY+'-probe','1'); storageOK=true; }
   catch(e){ try{ const r=await window.storage.get(KEY,false); if(r&&r.value) Object.assign(S,JSON.parse(r.value)); storageOK=true; }catch(e2){ storageOK=false; } }
-  if(!S.h) S.h={days:{},m:1,d:1}; if(S.h.maxes){ S.maxes=S.maxes||{}; for(const k in S.h.maxes) if(!S.maxes[k]) S.maxes[k]={v:S.h.maxes[k],src:'tested'}; delete S.h.maxes; } goNext(); S.tab='home';
+  if(!S.h) S.h={days:{},m:1,d:1}; if(!S.l) S.l={log:[],pain:null,area:null}; if(S.h.maxes){ S.maxes=S.maxes||{}; for(const k in S.h.maxes) if(!S.maxes[k]) S.maxes[k]={v:S.h.maxes[k],src:'tested'}; delete S.h.maxes; } goNext(); S.tab='home';
   if('serviceWorker' in navigator){ try{ navigator.serviceWorker.register('sw.js').then(reg=>{ reg.update(); reg.addEventListener('updatefound',()=>{ const nw=reg.installing; nw&&nw.addEventListener('statechange',()=>{ if(nw.state==='activated'&&!window.__reloaded){ window.__reloaded=1; toast('Updating…'); setTimeout(()=>location.reload(),600); } }); }); }); }catch(e){} }
   if(navigator.storage&&navigator.storage.persist){ try{ navigator.storage.persist(); }catch(e){} }
   render();
@@ -500,8 +514,8 @@ function toggleExUnit(name){ const from=exUnit(name), to=from==='lb'?'kg':'lb'; 
 /* ============================ RENDER ============================ */
 function render(){
   const app=document.getElementById('app');
-  app.innerHTML = {home:vHome,hday:vHDay,hlib:vHLib,hbest:vHBests,train:vTrain,program:vProgram,run:vRun,prs:vPRs,progress:vProgress,more:vMore}[S.tab]();
-  const tabs=S.prog==='h'?[['home','Home'],['hday','Day'],['hlib','Library'],['hbest','Bests'],['more','More']]:[['home','Home'],['train','Train'],['program','Program'],['run','Run'],['prs','PRs'],['progress','Progress'],['more','More']];
+  app.innerHTML = {home:vHome,lfix:vLFix,lareas:vLAreas,llog:vLLog,hday:vHDay,hlib:vHLib,hbest:vHBests,train:vTrain,program:vProgram,run:vRun,prs:vPRs,progress:vProgress,more:vMore}[S.tab]();
+  const tabs=S.prog==='l'?[['home','Home'],['lfix','Fix'],['lareas','Areas'],['llog','Log'],['more','More']]:S.prog==='h'?[['home','Home'],['hday','Day'],['hlib','Library'],['hbest','Bests'],['more','More']]:[['home','Home'],['train','Train'],['program','Program'],['run','Run'],['prs','PRs'],['progress','Progress'],['more','More']];
   document.getElementById('tabs').style.display=S.tab==='home'?'none':'';
   document.getElementById('tabs').innerHTML=tabs.map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
   updateStatus();
@@ -621,12 +635,49 @@ function vHBests(){
   rows.forEach(({w,b})=>{ h+=`<div class="prcard"><h3>${esc(w.n)}</h3>`; if(b.time) h+=`<span class="k">Fastest</span><span class="v">${b.time.time}<small> ${b.time.scale==='rxp'?'RX+':b.time.scale==='scaled'?'Scaled':'RX'} · ${fmtDate(b.time.date)}</small></span>`; if(b.score) h+=`<span class="k">Best score</span><span class="v">${b.score.score}<small> ${b.score.scale==='rxp'?'RX+':b.score.scale==='scaled'?'Scaled':'RX'} · ${fmtDate(b.score.date)}</small></span>`; h+=`<span class="k">Done</span><span class="v" style="font-size:16px">${b.n}×</span></div>`; });
   return h+'</div>';
 }
+
+/* ============================ SUPPLE LEOPARD ============================ */
+let lTimer=null, lTimerLeft=0, lTimerKey='';
+function lArea(id){ return L_AREAS.find(a=>a.id===id); }
+function lToday(){ return new Date().toISOString().slice(0,10); }
+function lDoneToday(areaId,mi){ return S.l.log.some(x=>x.d===lToday()&&x.a===areaId&&x.i===mi); }
+function lMark(areaId,mi){ const k=S.l.log.findIndex(x=>x.d===lToday()&&x.a===areaId&&x.i===mi); if(k>=0) S.l.log.splice(k,1); else S.l.log.push({d:lToday(),a:areaId,i:mi,pain:S.l.pain||null,t:new Date().toISOString()}); save(); render(); }
+function lStart(key,sec){ clearInterval(lTimer); if(lTimerKey===key&&lTimerLeft>0){ lTimerKey=''; lTimerLeft=0; render(); return; } lTimerKey=key; lTimerLeft=sec; render(); lTimer=setInterval(()=>{ lTimerLeft--; const el=document.getElementById('lt-'+key); if(el) el.textContent=fmtDur(lTimerLeft*1000); if(lTimerLeft<=0){ clearInterval(lTimer); lTimerKey=''; try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(e){} toast('Switch sides / next'); render(); } },1000); }
+function lMobCard(a,mi,m){ const key=a.id+'-'+mi, done=lDoneToday(a.id,mi), running=lTimerKey===key;
+  return `<div class="ex lmob ${done?'ldone':''}"><div class="lhead"><h3>${esc(m.n)}</h3><button class="tick ${done?'on':''}" onclick="lMark(${a.id},${mi})">✓</button></div>
+  <div class="sub"><span>${esc(m.tool)} · <b>${esc(m.dose)}</b></span><span class="pr">${m.m.map(k=>L_METHODS[k][0]).join(' · ')}</span></div>
+  <p class="lhow">${esc(m.how)}</p>
+  <div class="row"><button class="btn ghost ${running?'lrun':''}" onclick="lStart('${key}',120)">${running?`<span id="lt-${key}">${fmtDur(lTimerLeft*1000)}</span> · stop`:'▶ 2:00 timer'}</button><button class="segbtn" onclick="lMethod('${m.m.join(',')}')">how?</button></div></div>`; }
+function lMethod(keys){ const sheet=document.getElementById('sheet'); sheet.innerHTML=`<div class="sh">${keys.split(',').map(k=>`<h3>${L_METHODS[k][0]}</h3><p>${esc(L_METHODS[k][1])}</p>`).join('')}<button class="btn" onclick="document.getElementById('sheet').classList.remove('open')">Close</button></div>`; sheet.classList.add('open'); }
+function vLFix(){
+  let h=`<div class="top"><h1>What hurts?<small>Supple Leopard — pick a spot</small></h1><span class="chip" id="status"></span></div>`;
+  h+=`<div class="paingrid">${L_PAIN.map(p=>`<button class="pain ${S.l.pain===p.n?'on':''}" onclick="S.l.pain='${p.n}';S.l.area=null;save();render();window.scrollTo(0,0)">${esc(p.n)}</button>`).join('')}</div>`;
+  const p=L_PAIN.find(x=>x.n===S.l.pain); if(!p) return h+`<p class="help" style="margin-top:14px">Tap a body part. You'll get the mobilizations for that area plus the ones upstream and downstream that usually cause it — 2 minutes each, 10-15 minutes total.</p>`;
+  h+=`<div class="lnote"><b>${esc(p.n)}</b><p>${esc(p.note)}</p></div>`;
+  const todayN=S.l.log.filter(x=>x.d===lToday()).length; h+=`<p class="help">${todayN?todayN+' done today · ':''}Test the restriction first, mobilize, then retest.</p>`;
+  p.areas.forEach((id,ix)=>{ const a=lArea(id); h+=`<div class="block"><h2><span><b>${ix===0?'Start here':'Then'}</b>Area ${a.id} — ${esc(a.name)} <small style="color:var(--ink2)">${esc(a.where)}</small></span></h2>`; a.mobs.forEach((m,mi)=>{ h+=lMobCard(a,mi,m); }); h+='</div>'; });
+  return h; }
+function vLAreas(){
+  let h=`<div class="top"><h1>Areas<small>13 zones, every mobilization</small></h1><span class="chip" id="status"></span></div>`;
+  h+=`<details class="prep"><summary>Rules of mobility</summary><ul>${L_RULES.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`;
+  L_AREAS.forEach(a=>{ h+=`<details class="prep" ${S.l.area===a.id?'open':''}><summary>Area ${a.id} — ${esc(a.name)} <span style="color:var(--ink2);font-weight:600">${esc(a.where)}</span></summary>${a.mobs.map((m,mi)=>lMobCard(a,mi,m)).join('')}</details>`; });
+  return h; }
+function vLLog(){
+  let h=`<div class="top"><h1>Log<small>mobility sessions</small></h1><span class="chip" id="status"></span></div>`;
+  const days={}; S.l.log.forEach(x=>{ (days[x.d]=days[x.d]||[]).push(x); }); const keys=Object.keys(days).sort().reverse();
+  const streak=(()=>{ let n=0; const d=new Date(); for(;;){ const k=d.toISOString().slice(0,10); if(days[k]){ n++; d.setDate(d.getDate()-1); } else break; } return n; })();
+  h+=`<div class="row"><div class="stat"><div class="k">Days in a row</div><div class="big">${streak}</div></div><div class="stat"><div class="k">Total mobilizations</div><div class="big">${S.l.log.length}</div></div></div>`;
+  if(!keys.length) return h+`<p class="empty">Nothing yet. Tick a mobilization when you finish it and it shows up here.</p>`;
+  keys.forEach(k=>{ const list=days[k]; const pains=[...new Set(list.map(x=>x.pain).filter(Boolean))]; h+=`<div class="ex"><h3 style="font-size:17px">${fmtDate(k+'T12:00:00')}<small style="color:var(--ink2);font-weight:600"> · ${list.length} × 2 min ≈ ${list.length*2} min${pains.length?' · '+pains.join(', '):''}</small></h3><div class="sub"><span>${list.map(x=>esc(lArea(x.a).mobs[x.i].n)).join(' · ')}</span></div></div>`; });
+  return h; }
+function lGo(){ S.prog='l'; S.tab='lfix'; }
 function vHome(){
   const total=[...Array(24)].reduce((a,_,i)=>a+days(planFor(i+1)),0);
   const done=Object.values(S.sessions).filter(x=>x.done).length;
   const nx=nextWorkout(), pct=Math.round(done/total*100);
   let h=`<div class="home"><h1 class="motto">Don't Be<br>a Bitch</h1><p class="sub">Your programs</p>`;
   PROGRAMS.forEach(pr=>{
+    if(pr.id==='l'){ const n=S.l.log.filter(x=>x.d===lToday()).length; h+=`<button class="pcard" onclick="lGo();save();render();window.scrollTo(0,0)"><span class="pn">${pr.name}</span><span class="pd">${pr.desc}</span><span class="pm">${n?n+' mobilizations today':'Nothing yet today'}${S.l.pain?' · last: '+esc(S.l.pain):''}</span><span class="pnx">What hurts? →</span></button>`; return; }
     if(pr.id==='h'){ const hd=Object.values((S.h||{days:{}}).days).filter(x=>x.done).length, ht=H_MONTHS.reduce((a,m)=>a+m.days.filter(x=>x.c!=='rest').length,0), hn=hNext(), hp=Math.round(hd/ht*100);
       h+=`<button class="pcard" onclick="hGoNext();save();render();window.scrollTo(0,0)"><span class="pn">${pr.name}</span><span class="pd">${pr.desc}</span><span class="bar"><i style="width:${hp}%"></i></span><span class="pm">${hd} / ${ht} days · ${hp}%</span><span class="pnx">Up next: Month ${hn.m} · Day ${hn.d} — ${esc(hType(hn.m,hn.d).l)} →</span></button>`; return; }
     h+=`<button class="pcard" onclick="S.prog='hpo';goNext();save();render();window.scrollTo(0,0)"><span class="pn">${pr.name}</span><span class="pd">${pr.desc}</span><span class="bar"><i style="width:${pct}%"></i></span><span class="pm">${done} / ${total} sessions · ${pct}%</span><span class="pnx">Up next: Week ${nx.w} · Day ${nx.d} (${planFor(nx.w)} Day) →</span></button>`;
@@ -789,7 +840,7 @@ function vMore(){
   h+=`<div id="imp" style="display:none;margin-top:10px"><input type="file" accept=".json,application/json" onchange="importFile(this)" style="margin-bottom:8px"><textarea class="io" id="impText" placeholder="Paste backup JSON here"></textarea><button class="btn ghost" onclick="importData()">Restore</button></div>`;
   h+=`<textarea class="io" id="expText" style="margin-top:10px;display:none"></textarea>`;
   h+=`<h2 class="sec">Lock</h2><button class="btn ghost" onclick="lock()">Lock app (ask for password again)</button>
-<h2 class="sec">Reset</h2><button class="btn danger" style="width:auto" onclick="if(confirm('Delete all logged sessions, runs, tests and 4 Horsemen days?')){S.sessions={};S.runs={};S.tests=[];S.h={days:{},m:1,d:1};save();render();}">Delete all data</button>`;
+<h2 class="sec">Reset</h2><button class="btn danger" style="width:auto" onclick="if(confirm('Delete all logged sessions, runs, tests and 4 Horsemen days?')){S.sessions={};S.runs={};S.tests=[];S.h={days:{},m:1,d:1};S.l={log:[],pain:null,area:null};save();render();}">Delete all data</button>`;
   h+=`<h2 class="sec">About</h2><p class="help">Version ${APP_VERSION}. <button class="segbtn" onclick="checkUpdate()">Check for update</button><br>24-week program: 4 phases × 6 weeks, three training-day plans plus the ESD running calendar. Blocks are supersets. Show up healthy.</p>`;
   return h;
 }
