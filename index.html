@@ -113,6 +113,19 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .gate input{width:100%;max-width:320px;padding:14px;border-radius:6px;border:2px solid #4A5753;background:#fff;color:var(--ink);font-size:20px;font-weight:600;text-align:center}
 .gate button{margin-top:12px;width:100%;max-width:320px;padding:14px;border-radius:6px;background:var(--accent);color:#fff;font-weight:800;font-size:18px}
 .gate .err{color:#F06A1F;margin-top:10px;font-weight:700;min-height:22px}
+
+.tbar{position:sticky;top:0;z-index:5;background:var(--ink);color:#fff;border-radius:var(--r);padding:10px 12px;margin:8px 0;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tbar .t{font-size:30px;font-weight:800;line-height:1;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.tbar .s{font-size:13px;color:#B9C3BF;font-weight:600}
+.tbar .s b{color:var(--accent);font-size:15px}
+.segbtn{border:2px solid var(--line);border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;background:#fff;color:var(--ink);white-space:nowrap}
+.segbtn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.segbtn.done{background:var(--bg);color:var(--ink2)}
+.block>h2{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.prep summary{align-items:center;gap:8px}
+.prep summary .segbtn{margin-left:auto}
+.split{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:15px;background:var(--panel);border-radius:var(--r);padding:10px 12px;margin:10px 0}
+.split b{font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -372,6 +385,26 @@ function bestOf(name){
 }
 function lastTime(name){ const h=history(name); return h[0]||null; }
 
+
+/* ============================ SESSION TIMER ============================ */
+const SEGS=['Warm-up','Block 1','Block 2','Block 3','Recovery'];
+function tm(){ return session(S.plan,S.week,S.day)?.timer; }
+function fmtDur(ms){ ms=Math.max(0,ms|0); const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60); return (h?h+':'+String(m%60).padStart(2,'0'):m)+':'+String(s%60).padStart(2,'0'); }
+function startSession(){ const ss=ensure(S.plan,S.week,S.day); ss.timer={start:Date.now(),segs:[],end:null}; ss.date=ss.date||new Date().toISOString(); save(); render(); }
+function startSeg(name){ const ss=ensure(S.plan,S.week,S.day); if(!ss.timer) startSession(); const t=ss.timer; if(t.end) return; const now=Date.now(); const cur=t.segs.find(x=>!x.end); if(cur){ if(cur.name===name) return; cur.end=now; } t.segs.push({name,start:now}); save(); render(); }
+function curSeg(){ const t=tm(); return t&&!t.end? t.segs.find(x=>!x.end):null; }
+function segDur(name){ const t=tm(); if(!t) return 0; return t.segs.filter(x=>x.name===name).reduce((a,x)=>a+((x.end||Date.now())-x.start),0); }
+function segBtn(name){ const t=tm(); if(!t||t.end){ const d=t?segDur(name):0; return t? (d?`<span class="segbtn done">${fmtDur(d)}</span>`:'') : ''; }
+  const c=curSeg(); if(c&&c.name===name) return `<span class="segbtn on">● ${fmtDur(segDur(name))}</span>`;
+  const d=segDur(name); return `<button class="segbtn" onclick="event.stopPropagation();event.preventDefault();startSeg('${name}')">${d?'Resume · '+fmtDur(d):'Start'}</button>`; }
+function timerBar(){ const t=tm(); if(!t) return `<button class="btn" style="margin:8px 0" onclick="startSession()">Start session timer</button>`;
+  const total=(t.end||Date.now())-t.start, c=curSeg();
+  return `<div class="tbar" id="tbar"><div><div class="t">${fmtDur(total)}</div><div class="s">${t.end?'Total training time':(c?'<b>'+c.name+'</b> · '+fmtDur(segDur(c.name)):'Running — tap Start on a section')}</div></div>${t.end?`<button class="segbtn" onclick="if(confirm('Clear this session\'s timer?')){delete ensure(S.plan,S.week,S.day).timer;save();render();}">Reset</button>`:''}</div>`; }
+function splits(){ const t=tm(); if(!t) return ''; const rows=SEGS.map(n=>[n,segDur(n)]).filter(x=>x[1]>0); if(!rows.length) return '';
+  const total=(t.end||Date.now())-t.start, acc=rows.reduce((a,x)=>a+x[1],0);
+  return `<div class="split">${rows.map(([n,d])=>`<span>${n}</span><b>${fmtDur(d)}</b>`).join('')}${total-acc>5000?`<span style="color:var(--ink2)">Between sections</span><b style="color:var(--ink2)">${fmtDur(total-acc)}</b>`:''}<span style="border-top:1px solid var(--line);padding-top:4px">Total</span><b style="border-top:1px solid var(--line);padding-top:4px">${fmtDur(total)}</b></div>`; }
+setInterval(()=>{ if(S.tab!=='train') return; const t=tm(); if(!t||t.end) return; const bar=document.getElementById('tbar'); if(bar){ const tmp=document.createElement('div'); tmp.innerHTML=timerBar(); bar.replaceWith(tmp.firstChild); } document.querySelectorAll('.segbtn.on').forEach(el=>{ const c=curSeg(); if(c) el.textContent='● '+fmtDur(segDur(c.name)); }); },1000);
+
 /* ============================ RENDER ============================ */
 function render(){
   const app=document.getElementById('app');
@@ -401,9 +434,10 @@ function vTrain(){
   h+=weekStrip();
   h+=`<div class="chips">${[...Array(days(p))].map((_,k)=>{const dd=k+1,done=session(p,w,dd)?.done;return `<button class="chip ${dd===d?'on':''}" onclick="setDay(${dd})">Day ${dd}${done?' ✓':''}</button>`;}).join('')}</div>`;
   const prep=PREP[p==='4'?d-1:d-1];
-  h+=`<details class="prep"><summary>Warm-up: pillar + movement prep</summary><div class="cols"><div><h4>Pillar prep</h4><ul>${prep.pillar.map(x=>`<li>${x}</li>`).join('')}</ul></div><div><h4>Movement prep</h4><ul>${prep.move.map(x=>`<li>${x}</li>`).join('')}</ul></div></div></details>`;
+  h+=timerBar();
+  h+=`<details class="prep"><summary>Warm-up: pillar + movement prep ${segBtn('Warm-up')}</summary><div class="cols"><div><h4>Pillar prep</h4><ul>${prep.pillar.map(x=>`<li>${x}</li>`).join('')}</ul></div><div><h4>Movement prep</h4><ul>${prep.move.map(x=>`<li>${x}</li>`).join('')}</ul></div></div></details>`;
   list.forEach((blk,bi)=>{
-    h+=`<div class="block"><h2><b>Block ${bi+1}</b>superset — finish all sets before moving on</h2>`;
+    h+=`<div class="block"><h2><span><b>Block ${bi+1}</b>superset — finish all sets before moving on</span>${segBtn('Block '+(bi+1))}</h2>`;
     blk.forEach((ex,ei)=>{
       const tg=P[ex.p][i], [unit,tw]=KIND[ex.p], ea=ex.f.includes('e'), key=bi+'-'+ei, sets=ss.sets[key]||[];
       const lt=lastTime(ex.n), best=bestOf(ex.n);
@@ -420,9 +454,10 @@ function vTrain(){
     });
     h+='</div>';
   });
+  h+=splits();
   h+=`<textarea class="notes" placeholder="Session notes" onchange="setNotes(this.value)">${esc(ss.notes||'')}</textarea>`;
-  h+=`<button class="btn ${ss.done?'done':''}" onclick="finish()">${ss.done?`Completed ${fmtDate(ss.date)} — tap to reopen`:'Finish session'}</button>`;
-  h+=`<details class="prep"><summary>Post-workout recovery</summary><ul>${RECOVERY.map(x=>`<li>${x}</li>`).join('')}</ul></details>`;
+  h+=`<button class="btn ${ss.done?'done':''}" onclick="finish()">${ss.done?`Completed ${fmtDate(ss.date)}${ss.timer&&ss.timer.end?' in '+fmtDur(ss.timer.end-ss.timer.start):''} — tap to reopen`:'Finish session'}</button>`;
+  h+=`<details class="prep"><summary>Post-workout recovery ${segBtn('Recovery')}</summary><ul>${RECOVERY.map(x=>`<li>${x}</li>`).join('')}</ul></details>`;
   h+=`<p class="help">RPE = reps in reserve scale: 9 → 1 left, 8 → 2 left, 7 → 3 left, 6 → 4-6 left, 5 and below → light.</p>`;
   return h;
 }
@@ -435,7 +470,7 @@ function checkPR(key){ const [bi,ei]=key.split('-'); const ex=exList(S.plan,S.we
   if(!cur.length||KIND[ex.p][0]!=='reps'||!KIND[ex.p][1]) return; const h=history(ex.n).filter(x=>!(x.week===S.week&&x.plan===S.plan&&x.day===S.day)); let prev=0; h.forEach(x=>x.sets.forEach(s=>{if(s.w&&s.r)prev=Math.max(prev,e1rm(+s.w,+s.r));}));
   const now=Math.max(...cur.map(s=>e1rm(+s.w,+s.r))); if(prev&&now>prev) toast(`PR — ${ex.n.split(' (')[0]} e1RM ${Math.round(now)}`); }
 function setNotes(v){ ensure(S.plan,S.week,S.day).notes=v; save(); }
-function finish(){ const ss=ensure(S.plan,S.week,S.day); ss.done=!ss.done; if(ss.done){ ss.date=ss.date||new Date().toISOString(); toast('Session saved'); } save(); render(); }
+function finish(){ const ss=ensure(S.plan,S.week,S.day); ss.done=!ss.done; if(ss.done){ ss.date=ss.date||new Date().toISOString(); if(ss.timer&&!ss.timer.end){ const c=ss.timer.segs.find(x=>!x.end); const now=Date.now(); if(c) c.end=now; ss.timer.end=now; } toast('Session saved'); } else if(ss.timer&&ss.timer.end){ ss.timer.end=null; } save(); render(); }
 
 function vProgram(){
   let h=header('full overview');
@@ -484,7 +519,10 @@ function vPRs(){
   const rows=allNames().map(n=>({n,b:bestOf(n)})).filter(x=>x.b);
   const sessionsDone=Object.values(S.sessions).filter(s=>s.done).length;
   const totalVol=rows.reduce((a,x)=>a+x.b.vol,0);
+  const times=Object.values(S.sessions).filter(s=>s.done&&s.timer&&s.timer.end).map(s=>s.timer.end-s.timer.start);
+  const avgT=times.length?times.reduce((a,b)=>a+b,0)/times.length:0;
   h+=`<div class="row"><div class="stat"><div class="k">Sessions completed</div><div class="big">${sessionsDone}</div></div><div class="stat"><div class="k">Total volume (${S.unit})</div><div class="big" style="font-size:34px">${Math.round(totalVol).toLocaleString()}</div></div></div>`;
+  if(times.length) h+=`<div class="row" style="margin-top:10px"><div class="stat"><div class="k">Avg session time</div><div class="big" style="font-size:34px">${fmtDur(avgT)}</div></div><div class="stat"><div class="k">Fastest session</div><div class="big" style="font-size:34px">${fmtDur(Math.min(...times))}</div></div></div>`;
   if(!rows.length) return h+`<p class="empty">Nothing logged yet. Bests show up here as soon as you enter a set.</p>`;
   rows.sort((a,b)=>(b.b.b1||b.b.bw||0)-(a.b.b1||a.b.bw||0));
   h+='<div class="prlist">';
