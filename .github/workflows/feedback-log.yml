@@ -1,0 +1,42 @@
+name: Log requests to FEEDBACK.md
+
+# Every request sent from the app arrives as a GitHub issue.
+# This copies each new one into FEEDBACK.md and marks it closed when the issue is closed.
+
+on:
+  issues:
+    types: [opened, closed, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feedback-log
+  cancel-in-progress: false
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update FEEDBACK.md
+        env:
+          ACTION: ${{ github.event.action }}
+          NUM: ${{ github.event.issue.number }}
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+          URL: ${{ github.event.issue.html_url }}
+          CREATED: ${{ github.event.issue.created_at }}
+          CLOSED: ${{ github.event.issue.closed_at }}
+        run: python3 .github/feedback_log.py
+      - name: Commit
+        run: |
+          if git diff --quiet -- FEEDBACK.md; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add FEEDBACK.md
+          git commit -m "Request log: #${{ github.event.issue.number }} ${{ github.event.action }}"
+          for i in 1 2 3; do git pull --rebase origin main && git push origin HEAD:main && exit 0; sleep 5; done
+          exit 1
