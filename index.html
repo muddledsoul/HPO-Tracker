@@ -323,6 +323,7 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .gpskey span{margin-left:auto}
 .gpsnote{font-size:13px;color:var(--ink2);margin:8px 0 0}
 .gpssplits{margin-top:8px}
+.gpswarn{font-size:13px;line-height:1.3;color:var(--ink);background:#FDE7DA;border-left:4px solid var(--accent);border-radius:var(--r);padding:8px 10px;margin:8px 0 0}
 .gpsdrop{display:block;margin:10px auto 0;font-size:14px;font-weight:600;color:var(--ink2);text-decoration:underline}
 .paces{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
 .paces span{background:var(--bg);border-radius:var(--r);padding:6px 4px;text-align:center;font-weight:800;font-size:15px;border:2px solid transparent}
@@ -546,7 +547,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.49';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.50';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},ne:{days:{},d:1},ka:{days:{},d:1},free:[],run:{setup:null,log:{},w:1,races:[]},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -1520,9 +1521,10 @@ function vRun(){
   h+=weekStrip();
   const lastTest=[...S.tests].sort((a,b)=>b.date.localeCompare(a.date))[0];
   h+=`<div class="row"><div class="stat"><div class="k">Latest 2-mile</div><div class="big" style="font-size:40px">${lastTest?lastTest.time:'—'}</div></div><div class="stat"><div class="k">This week</div><div class="big" style="font-size:40px">${rw.mi}<small style="font-size:16px"> mi</small></div></div></div>`;
-  rw.s.forEach((s,i)=>{ const k=`w${w}|${i}`, v=S.runs[k]||{};
+  rw.s.forEach((s,i)=>{ const k=`w${w}|${i}`, v=S.runs[k]||{}, gp=s.k!=='Non-impact', open=S.runOpen===k||(GPS.on&&GPS.key===k);
     h+=`<div class="run"><button class="tick ${v.done?'on':''}" onclick="runTick('${k}')">✓</button><div><h3>${s.t}</h3><div class="kind">${s.k}${s.k==='Test'?' — log below':''}</div></div>`+
-       `<div class="fields"><input placeholder="${s.k==='Test'?'Time mm:ss':'Time / splits'}" value="${esc(v.time||'')}" onchange="runVal('${k}','time',this.value,${s.k==='Test'})"><input placeholder="Notes / distance" value="${esc(v.notes||'')}" onchange="runVal('${k}','notes',this.value)"></div><div style="grid-column:2"><button class="segbtn" onclick="S.runOpen=S.runOpen==='${k}'?'':'${k}';render()">${S.runOpen===k?'Hide timer':'▶ Guided timer'}</button></div>${S.runOpen===k?`<div style="grid-column:1/-1">${tmWidget(runSegs(s.t),'run'+k,0)}</div>`:''}</div>`; });
+       `<div class="fields"><input placeholder="${s.k==='Test'?'Time mm:ss':'Time / splits'}" value="${esc(v.time||'')}" onchange="runVal('${k}','time',this.value,${s.k==='Test'})"><input placeholder="Notes / distance" value="${esc(v.notes||'')}" onchange="runVal('${k}','notes',this.value)"></div><div style="grid-column:2"><button class="segbtn" onclick="S.runOpen=S.runOpen==='${k}'?'':'${k}';render()">${open?(gp?'Hide timer + GPS':'Hide timer'):(gp?(v.gps?'▶ Timer + GPS · map saved':'▶ Guided timer + GPS'):'▶ Guided timer')}</button></div>${open?`<div style="grid-column:1/-1">${tmWidget(runSegs(s.t),'run'+k,0)}${gp?gpsWidget(k,v):''}</div>`:''}</div>`; });
+  h+=gpsLogHtml('hpo');
   h+=`<h2 class="sec">2-mile test history</h2>`;
   if(!S.tests.length) h+=`<p class="empty">No tests yet. Log your first 2-mile time on a test week (6, 12, 17, 24) or add one below.</p>`;
   else h+=`<table><tr><th>Date</th><th>Week</th><th>Time</th><th></th></tr>${[...S.tests].sort((a,b)=>a.date.localeCompare(b.date)).map((t,i)=>`<tr><td>${fmtDate(t.date)}</td><td>${t.week||'-'}</td><td><b>${t.time}</b></td><td><button onclick="delTest(${S.tests.indexOf(t)})" style="color:#B3261E;font-weight:700">×</button></td></tr>`).join('')}</table>`;
