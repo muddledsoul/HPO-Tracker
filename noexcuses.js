@@ -125,7 +125,7 @@ const NE_TIMERS=[
  tFlow(["World's greatest stretch",'Cat-cow','Down dog → cobra','Deep squat hold','Couch stretch L','Couch stretch R','Pigeon L','Pigeon R']),
  tTest(),
 ];
-const neSw=(segs)=>{ let t=0; for(let i=0;i<segs.length;i++){ t+=segs[i].s; const a=segs[i],b=segs[i+1]; const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!/^(min|station)\b/i.test(b.r||'')&&!/^(min|station)\b/i.test(a.r||'')) t+=10; } return t; };
+const neSw=(segs,warmT)=>{ let t=0; for(let i=0;i<segs.length;i++){ t+=segs[i].s; const a=segs[i],b=segs[i+1]; if(warmT&&b&&a.k==='warm'&&b.k==='work'){ t+=10; continue; } const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!/^(min|station)\b/i.test(b.r||'')&&!(a.g&&a.g===b.g)&&!/^(min|station)\b/i.test(a.r||'')) t+=10; } return t; };
 NE_DAYS.forEach((d,i)=>{ const t=neSw(NE_TIMERS[i]); d.dur=Math.ceil(t/60); d.secs=t; });
 
 // ---------- BONUS WORKOUTS (optional second session, 10 min) ----------

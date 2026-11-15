@@ -547,7 +547,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.51';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.52';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},ne:{days:{},d:1},ka:{days:{},d:1},free:[],run:{setup:null,log:{},w:1,races:[]},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -861,7 +861,7 @@ function tmPresc(l){ const m=String(l).match(/^(\d+)\s/); if(m) return +m[1]; if
 // 10-second switch between back-to-back work segments that change exercise (not side switches, not fixed EMOM/station slots)
 function tmSwOn(key){ if(S.sw&&S.sw[key]!=null) return !!S.sw[key]; return S.swDefault!==false; }
 function tmSwToggle(key){ S.sw=S.sw||{}; S.sw[key]=!tmSwOn(key); save(); if(TM.key===key&&!TM.on) tmStop(); render(); }
-function tmWithSwitches(segs,key){ if(key!=null&&!tmSwOn(key)) return segs; const o=[]; const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); for(let i=0;i<segs.length;i++){ const a=segs[i], b=segs[i+1]; o.push(a); if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!(a.g&&a.g===b.g)&&!/^(min|station)\b/i.test(b.r||'')&&!/^(min|station)\b/i.test(a.r||'')) o.push({l:'Switch → '+b.l,s:10,k:'prep',r:b.r||''}); } return o; }
+function tmWithSwitches(segs,key){ if(key!=null&&!tmSwOn(key)) return segs; const o=[]; const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); for(let i=0;i<segs.length;i++){ const a=segs[i], b=segs[i+1]; o.push(a); if(b&&a.k==='warm'&&b.k==='work'&&!/^run/.test(String(key))){ if(/^ne/.test(String(key))){ if(a.s<=10) continue; o[o.length-1]=Object.assign({},a,{s:a.s-10}); } o.push({l:'Switch → '+b.l,s:10,k:'prep',r:b.r||''}); continue; } if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!(a.g&&a.g===b.g)&&!/^(min|station)\b/i.test(b.r||'')&&!/^(min|station)\b/i.test(a.r||'')) o.push({l:'Switch → '+b.l,s:10,k:'prep',r:b.r||''}); } return o; }
 function tmLoad(segs,key,day){ tmStop(); segs=[{l:'Get ready',s:10,k:'prep',r:''}].concat(tmWithSwitches(segs,key)); TM.segs=segs; TM.key=key; TM.day=day; TM.i=0; TM.left=segs[0].s; TM.el=0; TM.total=segs.reduce((a,x)=>a+(x.l==='Get ready'?0:x.s),0); TM.on=false; TM.log=[]; TM.pend=null; }
 function tmToggle(segs,key,day){ const sw=TM.key&&TM.key!==key; if(TM.key!==key||!TM.segs.length||TM.i>=TM.segs.length) tmLoad(segs,key,day); if(sw) render(); if(TM.on){ TM.on=false; clearInterval(TM.iv); TM.iv=null; } else { TM.on=true; tmTone(660,60,0,0.2); clearInterval(TM.iv); TM.iv=setInterval(tmTick,1000); } tmPaint(); }
 function tmStop(){ clearInterval(TM.iv); TM.iv=null; TM.on=false; TM.segs=[]; TM.key=''; TM.i=0; TM.left=0; TM.el=0; TM.log=[]; TM.pend=null; }
@@ -883,7 +883,7 @@ function tmLogHtml(){ if(!TM.log.length&&!TM.pend) return ''; const agg={}; TM.l
   return `<div class="tmlog">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
 function tmPendHtml(){ const p=TM.pend; if(!p) return ''; const isMax=p.p==='max'; const isPlank=/plank|hold|sit\b/i.test(p.l);
   return `<div class="tmpend"><span>${esc(p.l)} — ${isPlank?'seconds held':'reps done'}?</span><input id="tm-reps" type="number" inputmode="numeric" placeholder="${typeof p.p==='number'?p.p:(isMax?'':'—')}" onchange="tmCommit();tmPaint()"><small>${typeof p.p==='number'?'blank = '+p.p+' (as prescribed)':isMax?'enter your number':'optional'}</small></div>`; }
-function tmWidget(segs,key,day){ const raw=segs; segs=tmWithSwitches(segs,key); const live=TM.key===key&&TM.segs.length; const hasSw=raw.some((a,i)=>{ const b=raw[i+1]; return b&&a.k==='work'&&b.k==='work'&&a.l!==b.l; }); const seg=live?TM.segs[Math.min(TM.i,TM.segs.length-1)]:segs[0]; const total=segs.reduce((a,x)=>a+x.s,0); const done=live&&TM.i>=TM.segs.length;
+function tmWidget(segs,key,day){ const raw=segs; segs=tmWithSwitches(segs,key); const live=TM.key===key&&TM.segs.length; const hasSw=raw.some((a,i)=>{ const b=raw[i+1]; return b&&((a.k==='work'&&b.k==='work'&&a.l!==b.l)||(a.k==='warm'&&b.k==='work'&&!/^run/.test(String(key)))); }); const seg=live?TM.segs[Math.min(TM.i,TM.segs.length-1)]:segs[0]; const total=segs.reduce((a,x)=>a+x.s,0); const done=live&&TM.i>=TM.segs.length;
   const left=live?TM.left:seg.s, el=live?TM.el:0, rem=total-el, next=live&&TM.i+1<TM.segs.length?TM.segs[TM.i+1]:(!live&&segs[1]?segs[1]:null); const k=key;
   return `<div class="tmw ${live&&TM.on?'on':''} ${seg.k} ${done?'fin':''}" id="tmw-${k}">
    <div class="tmrow"><span>Elapsed</span><b id="tm-el-${k}">${fmtDur(el*1000)}</b></div>
