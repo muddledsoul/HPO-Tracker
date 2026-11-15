@@ -126,6 +126,7 @@ Progress tab: the program's own score (test comparison, pain/swelling trend, bes
 | 2026-11-14 | **GPS run tracking for Road Work** (`gps.js`, v1.49): live map and route, distance, pace now / average (min per mile or km), splits, 5K estimate, colour-coded speed-up / slow-down coaching tied to the timer segment, saved track with review map, GPS run log on the Fitness tab, unfinished-run recovery. |
 | 2026-11-14 | GPS run tracking added to the 24-week program's Run tab (v1.50): same map, pace, splits, 5K estimate and colour coaching, targets from the guide's pace table by 2-mile band; GPS run log under the week's sessions. |
 | 2026-11-14 | Disclaimer shown beside every GPS map (start, live and saved views): web app, screen must stay on with the app in front, no background GPS; routes and history are stored only on the phone (only OpenStreetMap map tiles are downloaded). |
+| 2026-11-15 | Feet — before first steps timer rebuilt (v1.51): plantar fascia stretch left then right (30 s each); toe yoga with both feet together as two back-to-back timers (big toes up / big toes down, 30 s each, no switch between); short foot with both feet together (60 s for 10 × 5 s holds). Segments that share a group tag `g` get no 10 s switch between them. |
 
 ---
 
