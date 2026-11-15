@@ -555,7 +555,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.54';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.55';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},ne:{days:{},d:1},ka:{days:{},d:1},free:[],run:{setup:null,log:{},w:1,races:[]},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -840,7 +840,7 @@ function hSegsForBlock(hdr,lines){ const H=hdr||''; const lab=lines.join(' · ')
   const est=Math.max(120,Math.min(600,lines.length*60)); return [GS(lab,est)]; }
 function hSegs(w){ let out=[]; (w.b||[]).forEach((blk,bi)=>{ let hdr=''; let lines=[]; const flush=()=>{ if(lines.length||(hdr&&/round|min|amrap|for time|tabata|emom|every|\d+-\d+/i.test(hdr))){ if(out.length) out.push(GS('Transition',30,'rest')); out.push(...hSegsForBlock(hdr,lines)); } hdr=''; lines=[]; }; blk.forEach(line=>{ if(line.startsWith('#')){ if(lines.length) flush(); hdr=line.slice(1); } else lines.push(line); }); flush(); }); if(!out.length) out=[GS(w.n,600)]; return out; }
 // ---- HPO lifting session: warm-up, 3 blocks × 3 rounds, recovery
-function hpoSegs(list){ const o=[GS('Warm-up — pillar prep + movement prep',360,'warm')]; list.forEach((blk,bi)=>{ const st=blk.map(ex=>[ex.n.split(' (')[0],40]); o.push(...gRounds(3,st,60,`Block ${bi+1} · Round`)); if(bi<list.length-1) o.push(GS('Move to the next block',45,'rest')); }); o.push(GS('Post-workout recovery — foam roll, stretch, breathe',300,'warm')); return o; }
+function hpoSegs(list){ const o=[GS('Warm-up — pillar prep + movement prep',360,'warm')]; list.forEach((blk,bi)=>{ const st=[]; blk.forEach(ex=>{ const n=ex.n.split(' (')[0]; if(tmIsSingle(n)) st.push([n+' — left',40],[n+' — right',40]); else st.push([n,40]); }); o.push(...gRounds(3,st,60,`Block ${bi+1} · Round`)); if(bi<list.length-1) o.push(GS('Move to the next block',45,'rest')); }); o.push(GS('Post-workout recovery — foam roll, stretch, breathe',300,'warm')); return o; }
 // ---- HPO running sessions
 function runSegs(t){ let m; const T=t;
   if((m=T.match(/\[(.+)\]\s*x\s*(\d+)\s*sets?/i))){ const parts=m[1].split('+').map(p=>p.trim()); const one=[]; parts.forEach(p=>{ const q=p.match(/(\d+)\s*(?:min|s)?\s*hard\s*\/\s*(\d+)\s*(?:min|s)?\s*easy/i)||p.match(/(\d+)(s|\s*min)?\s*hard\s*\/\s*(\d+)(s|\s*min)?\s*easy/i); if(!q) return; const on=/\bs\b|s\s*hard|30s/.test(p.split('/')[0])&&!/min/.test(p.split('/')[0])?+q[1]:+q[1]*60; const offRaw=p.split('/')[1]; const offN=+(offRaw.match(/(\d+)/)||[0,1])[1]; const off=/s\b|sec/.test(offRaw)&&!/min/.test(offRaw)?offN:offN*60; one.push(GS('Hard',on,'work'),GS('Easy',off,'rest')); }); const o=[GS('Warm-up — easy 8 min',480,'warm')]; for(let i=0;i<+m[2];i++){ one.forEach((x,j)=>o.push(GS(x.l,x.s,x.k,`Set ${i+1} / ${m[2]}`))); } o.push(GS('Cool-down',300,'warm')); return o; }
@@ -871,7 +871,7 @@ function tmSwOn(key){ if(S.sw&&S.sw[key]!=null) return !!S.sw[key]; return S.swD
 function tmSwToggle(key){ S.sw=S.sw||{}; S.sw[key]=!tmSwOn(key); save(); if(TM.key===key&&!TM.on) tmStop(); render(); }
 function tmWithSwitches(segs,key){ if(key!=null&&!tmSwOn(key)) return segs; const o=[]; const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); for(let i=0;i<segs.length;i++){ const a=segs[i], b=segs[i+1]; o.push(a); if(b&&a.k==='warm'&&b.k==='work'&&!/^run/.test(String(key))){ if(/^ne/.test(String(key))){ if(a.s<=10) continue; o[o.length-1]=Object.assign({},a,{s:a.s-10}); } o.push({l:'Switch → '+b.l,s:10,k:'prep',r:b.r||''}); continue; } if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!(a.g&&a.g===b.g)&&!/^(min|station)\b/i.test(b.r||'')&&!/^(min|station)\b/i.test(a.r||'')) o.push({l:'Switch → '+b.l,s:10,k:'prep',r:b.r||''}); } return o; }
 function tmLoad(segs,key,day){ tmStop(); segs=[{l:'Get ready',s:10,k:'prep',r:''}].concat(tmWithSwitches(segs,key)); TM.segs=segs; TM.key=key; TM.day=day; TM.i=0; TM.left=segs[0].s; TM.el=0; TM.total=segs.reduce((a,x)=>a+(x.l==='Get ready'?0:x.s),0); TM.on=false; TM.log=[]; TM.pend=null; }
-function tmToggle(segs,key,day){ const sw=TM.key&&TM.key!==key; if(TM.key!==key||!TM.segs.length||TM.i>=TM.segs.length) tmLoad(segs,key,day); if(sw) render(); if(TM.on){ TM.on=false; clearInterval(TM.iv); TM.iv=null; } else { TM.on=true; tmTone(660,60,0,0.2); clearInterval(TM.iv); TM.iv=setInterval(tmTick,1000); } tmPaint(); }
+function tmToggle(segs,key,day){ if(TM.key===key&&TM.pend&&TM.i>=TM.segs.length) tmCommit(); const sw=TM.key&&TM.key!==key; if(TM.key!==key||!TM.segs.length||TM.i>=TM.segs.length) tmLoad(segs,key,day); if(sw) render(); if(TM.on){ TM.on=false; clearInterval(TM.iv); TM.iv=null; } else { TM.on=true; tmTone(660,60,0,0.2); clearInterval(TM.iv); TM.iv=setInterval(tmTick,1000); } tmPaint(); }
 function tmStop(){ clearInterval(TM.iv); TM.iv=null; TM.on=false; TM.segs=[]; TM.key=''; TM.i=0; TM.left=0; TM.el=0; TM.log=[]; TM.pend=null; }
 function tmReset(){ const s=TM.segs,k=TM.key,d=TM.day; tmStop(); if(s.length) tmLoad(s,k,d); render(); }
 function tmCommit(){ // finalize the pending work segment: use entered reps, else the prescribed count
@@ -887,11 +887,12 @@ function tmTick(){ if(!TM.on) return; TM.left--; if(TM.segs[TM.i].l!=='Get ready
     TM.left=TM.segs[TM.i].s; const k=TM.segs[TM.i].k; if(k==='work') tmCue('go'); else if(k==='rest') tmCue('rest'); else tmCue('end'); tmVib(k==='rest'?[150]:[200,80,200]); }
   { const t=tmTempo(); if(t&&t.start&&TM.left>3) tmTone({u:880,h:660,d:440,r:330}[t.c]||660,70,0,0.18,'sine'); }
   tmPaint(); }
-function tmFinishLog(){ tmCommit(); render(); }
+function tmFinishLog(){ tmCommit(); render(); toast('Reps saved'); }
+function neFixReps(bonus,label){ const x0=neEnsure(S.ne.d), x=bonus?(x0.bonus=x0.bonus||{}):x0; const list=(x.reps||[]).filter(e=>e.l===label); if(!list.length) return; const cur=list.reduce((a,e)=>a+(e.r||0),0); const v=prompt('Total for '+label+' ('+list.length+(list.length>1?' sets':' set')+')',String(cur)); if(v===null||v.trim()===''||isNaN(+v)||+v<0) return; const last=list[list.length-1]; last.r=Math.max(0,(last.r||0)+(Math.round(+v)-cur)); save(); render(); toast('Reps updated'); }
 function tmLogHtml(){ if(!TM.log.length&&!TM.pend) return ''; const agg={}; TM.log.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); });
   return `<div class="tmlog">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
-function tmPendHtml(){ const p=TM.pend; if(!p) return ''; const isMax=p.p==='max'; const isPlank=/plank|hold|sit\b/i.test(p.l);
-  return `<div class="tmpend"><span>${esc(p.l)} — ${isPlank?'seconds held':'reps done'}?</span><input id="tm-reps" type="number" inputmode="numeric" placeholder="${typeof p.p==='number'?p.p:(isMax?'':'—')}" onchange="tmCommit();tmPaint()"><small>${typeof p.p==='number'?'blank = '+p.p+' (as prescribed)':isMax?'enter your number':'optional'}</small></div>`; }
+function tmPendHtml(){ const p=TM.pend; if(!p) return ''; const isMax=p.p==='max'; const isPlank=/plank|hold|sit\b/i.test(p.l); const fin=TM.i>=TM.segs.length;
+  return `<div class="tmpend ${fin?'fin':''}"><span>${fin?'Final round — ':''}${esc(p.l)} — ${isPlank?'seconds held':'reps done'}?</span><input id="tm-reps" type="number" inputmode="numeric" placeholder="${typeof p.p==='number'?p.p:(isMax?'':'—')}" onchange="tmCommit();tmPaint()"><small>${typeof p.p==='number'?'blank = '+p.p+' (as prescribed)':isMax?'enter your number':'optional'}</small>${fin?'<button class="btn ghost" style="margin:6px 0 0;grid-column:1/-1;color:var(--ink)" onclick="tmFinishLog()">Save final round</button>':''}</div>`; }
 // ---- tempo prompt: a work segment with tp=[[label,sec,colour]...] shows UP 3-2-1 / HOLD 2-1 / DOWN 3-2-1 and the rep count
 function tmTempo(){ const seg=TM.segs[TM.i]; if(!seg||!seg.tp||seg.k!=='work'||TM.i>=TM.segs.length) return null; const cyc=seg.tp.reduce((a,p)=>a+p[1],0), e=Math.max(0,seg.s-TM.left); if(e>=seg.s) return null; const reps=Math.max(1,Math.round(seg.s/cyc)), rep=Math.min(reps,Math.floor(e/cyc)+1); let pos=e%cyc, pi=0; while(pos>=seg.tp[pi][1]){ pos-=seg.tp[pi][1]; pi++; } return {pi,name:seg.tp[pi][0],c:seg.tp[pi][2],left:seg.tp[pi][1]-pos,start:pos===0,rep,reps,tp:seg.tp}; }
 function tmTempoHtml(){ const t=tmTempo(); if(!t) return ''; return `<div class="tpbox ${t.c}"><span class="tpn">${t.name}</span><span class="tpc">${t.left}</span></div><div class="tpsteps">${t.tp.map((p,i)=>`<span class="${p[2]} ${i===t.pi?'on':''}">${p[0]} ${p[1]}</span>`).join('')}</div><div class="tprep">Rep ${t.rep} / ${t.reps}</div>`; }
@@ -912,7 +913,7 @@ function tmPaint(){ const k=TM.key; const w=document.getElementById('tmw-'+k); i
   const pe=document.getElementById('tm-pend-'+k); if(pe){ const cur=pe.dataset.i||''; const want=TM.pend?String(TM.pend.i):''; if(cur!==want){ pe.innerHTML=tmPendHtml(); pe.dataset.i=want; } }
   const lg=document.getElementById('tm-log-'+k); if(lg) lg.innerHTML=tmLogHtml();
   w.className='tmw '+(TM.on?'on ':'')+(done?'fin':seg.k); const bar=w.querySelector('.tmbar i'); if(bar) bar.style.width=Math.round(TM.el/TM.total*100)+'%'; const btn=document.getElementById('tm-btn-'+k); if(btn){ btn.textContent=TM.on?'Pause':TM.el?'Resume':'Start'; btn.className='btn '+(TM.on?'':'done'); if(!w.querySelector('.btn.ghost')&&TM.segs.length){ const b=document.createElement('button'); b.className='btn ghost'; b.style.margin='0'; b.textContent='Reset'; b.onclick=tmReset; btn.parentNode.appendChild(b); } }
-  if(done&&TM.pend){ tmCommit(); } }
+}
 
 
 /* ============================ PHOTOS (IndexedDB) ============================ */
@@ -1394,7 +1395,7 @@ function vNEDay(){ hInfoLines=[];
   let i=0; day.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=neLine(line,typeof line==='string'?-1:i,scale,x.ov); if(typeof line!=='string') i++; }); h+='</div>'; });
   h+=`</div>`;
   h+=tmWidget(tmSided(NE_TIMERS[d-1],day.b.reduce((a,b)=>a.concat(b.lines),[]),0,neMoveText,scale,x.ov,true),'ne'+d,d);
-  if(x.reps&&x.reps.length&&TM.key!=='ne'+d){ const agg={}; x.reps.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); }); h+=`<div class="tmlog saved">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
+  if(x.reps&&x.reps.length&&TM.key!=='ne'+d){ const agg={}; x.reps.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); }); h+=`<p class="help" style="margin:8px 0 0">Logged reps — tap a total to correct it.</p><div class="tmlog saved">${Object.keys(agg).map(l=>`<span onclick="neFixReps(false,decodeURIComponent('${encodeURIComponent(l).replace(/'/g,'%27')}'))">${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
   if(day.test){ const t=x.test||{}; const b=neDay(1)?.test||{};
     h+=`<div class="netest">${[['pushup','Push ups'],['squat','Squats'],['pull','Rows / pull ups'],['plank','Plank (sec)']].map(([k,l])=>`<label><span>${l}${d===30&&b[k]!=null&&b[k]!==''?`<i>Day 1: ${b[k]}</i>`:''}</span><input type="number" inputmode="numeric" value="${t[k]??''}" onchange="neSetTest('${k}',this.value)"></label>`).join('')}</div>`; }
   else h+=`<div class="hlog"><div><label>Time (mm:ss)</label><input placeholder="7:45" value="${esc(x.time||'')}" onchange="neSet('time',this.value)"></div><div><label>Rounds / reps / sets</label><input inputmode="decimal" placeholder="e.g. 6" value="${esc(x.score??'')}" onchange="neSet('score',this.value)"></div></div>`;
@@ -1408,7 +1409,7 @@ function vNEDay(){ hInfoLines=[];
   let bi=1000; bo.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=neLine(line,typeof line==='string'?-1:bi,scale,x.ov); if(typeof line!=='string') bi++; }); h+='</div>'; });
   h+=`</div>`;
   h+=tmWidget(bo.tm(),'neb'+d,d);
-  if(bx.reps&&bx.reps.length&&TM.key!=='neb'+d){ const agg={}; bx.reps.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); }); h+=`<div class="tmlog saved">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
+  if(bx.reps&&bx.reps.length&&TM.key!=='neb'+d){ const agg={}; bx.reps.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); }); h+=`<p class="help" style="margin:8px 0 0">Logged reps — tap a total to correct it.</p><div class="tmlog saved">${Object.keys(agg).map(l=>`<span onclick="neFixReps(true,decodeURIComponent('${encodeURIComponent(l).replace(/'/g,'%27')}'))">${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
   h+=`<div class="hlog"><div><label>Time (mm:ss)</label><input placeholder="8:10" value="${esc(bx.time||'')}" onchange="neSetB('time',this.value)"></div><div><label>Rounds / reps</label><input inputmode="decimal" placeholder="e.g. 5" value="${esc(bx.score??'')}" onchange="neSetB('score',this.value)"></div></div>`;
   h+=`<button class="btn ${bx.done?'done':''}" onclick="neFinishB()">${bx.done?`Bonus done ${fmtDate(bx.date)} — tap to reopen`:'Mark second workout complete'}</button></details>`;
   h+=CLR('neClear');
