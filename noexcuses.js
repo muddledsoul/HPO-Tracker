@@ -96,7 +96,7 @@ const tTest=()=>[SEG('Max push ups',120,'work','1 / 4'),SEG('Rest',30,'rest'),SE
 const NE_TIMERS=[
  tTest(),
  [...tWarm(),...tEmom(8,['8 push ups','6 pike push ups']),SEG('Plank',30)],
- [...tWarm(),...tTabata('Squats'),SEG('Glute bridges, slow',60,'work','Active break'),...tTabata('Alternating lunges')],
+ [...tWarm(),...tTabata('Squats'),Object.assign(SEG('Glute bridges, slow',60,'work','Active break'),{m:'bridge'}),...tTabata('Alternating lunges')],
  [...tWarm().map(s=>Object.assign(s,{s:50})),...tRounds(4,[['8 rows / pull ups',30],['10 supermans',25],['Hollow hold',20],['Mountain climbers',25]],0)],
  [...tWarm(),...tOne('AMRAP — 5 burpees · 10 climbers each · 15 jacks',480)],
  [...tWarm(),...tOne('Ladder 1-5-1 — push up · squat · sit up (stop the clock when done)',480)],
@@ -125,6 +125,14 @@ const NE_TIMERS=[
  tFlow(["World's greatest stretch",'Cat-cow','Down dog → cobra','Deep squat hold','Couch stretch L','Couch stretch R','Pigeon L','Pigeon R']),
  tTest(),
 ];
+// Single-leg / single-arm anything is an each-side movement: a timer block tagged with its move key (m) becomes a left block and a right block
+// whenever the version in use (Scaled / RX / RX+, or a per-line override) is single-sided. halve=true keeps the clock total (No Excuses); otherwise each side gets the full time.
+const TM_SINGLE=/single[- ]?(leg|arm)|one[- ](leg|arm)|on one (leg|arm)/i, TM_HASSIDE=/[—-]\s*(left|right)\s*$|\b[LR]$|each (side|leg|arm|foot)|both sides|alternat/i;
+function tmIsSingle(text){ return TM_SINGLE.test(text||'')&&!/alternat/i.test(text||''); }
+function tmSided(segs,lines,first,textOf,scale,ov,halve){ const flat=lines.filter(l=>Array.isArray(l)); const o=[];
+  segs.forEach(s=>{ let single=false; if(s.m&&s.k==='work'&&!TM_HASSIDE.test(s.l)){ const i=flat.findIndex(l=>l[0]===s.m); if(i>=0) single=tmIsSingle(textOf(s.m,(ov&&ov[first+i])||scale)); }
+    if(!single){ o.push(s); return; } const l=s.l.replace(/\s*·\s*both feet( together)?/i,'').replace(/\s*—\s*both feet( together)?/i,''), d=halve?Math.round(s.s/2):s.s; o.push(Object.assign({},s,{l:l+' — left',s:d}),Object.assign({},s,{l:l+' — right',s:d})); });
+  return o; }
 const neSw=(segs,warmT)=>{ let t=0; for(let i=0;i<segs.length;i++){ t+=segs[i].s; const a=segs[i],b=segs[i+1]; if(warmT&&b&&a.k==='warm'&&b.k==='work'){ t+=10; continue; } const base=l=>String(l).replace(/\s*[—-]\s*(left|right)\s*$/i,'').trim().toLowerCase(); if(b&&a.k==='work'&&b.k==='work'&&base(a.l)!==base(b.l)&&!/^(min|station)\b/i.test(b.r||'')&&!(a.g&&a.g===b.g)&&!/^(min|station)\b/i.test(a.r||'')) t+=10; } return t; };
 NE_DAYS.forEach((d,i)=>{ const t=neSw(NE_TIMERS[i]); d.dur=Math.ceil(t/60); d.secs=t; });
 

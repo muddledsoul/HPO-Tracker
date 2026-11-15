@@ -236,6 +236,14 @@ textarea.io{width:100%;min-height:90px;font:13px monospace;border:2px solid var(
 .tmmain{text-align:center;padding:8px 0 6px}
 .tmr{font-size:13px;font-weight:800;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;min-height:16px}
 .tmfin .tmr{color:#fff}
+.tmtp{min-height:0}
+.tpbox{display:flex;align-items:center;justify-content:center;gap:14px;border-radius:var(--r);padding:10px 12px;margin:10px 0 6px;color:#fff;background:#4A5753}
+.tpbox .tpn{font-size:34px;font-weight:800;letter-spacing:.02em}.tpbox .tpc{font-size:54px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.tpbox.u{background:#1F8A55}.tpbox.h{background:#C98A0A}.tpbox.d{background:#1F6FD0}.tpbox.r{background:#5B6763}
+.tpsteps{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;font-size:13px;font-weight:700}
+.tpsteps span{padding:3px 9px;border-radius:999px;border:2px solid #4A5753;color:#C9CFCC}
+.tpsteps span.on{color:#fff}.tpsteps span.on.u{background:#1F8A55;border-color:#1F8A55}.tpsteps span.on.h{background:#C98A0A;border-color:#C98A0A}.tpsteps span.on.d{background:#1F6FD0;border-color:#1F6FD0}.tpsteps span.on.r{background:#5B6763;border-color:#5B6763}
+.tprep{text-align:center;font-size:15px;font-weight:700;margin-top:6px;color:#fff}
 .tmbig{font-size:84px;font-weight:800;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:2px 0}
 .tml{font-size:18px;font-weight:700;line-height:1.15;margin-top:4px}
 .tmn{font-size:13px;color:#B9C3BF;margin-top:6px;min-height:16px}
@@ -547,7 +555,7 @@ const PACE = {
 };
 
 /* ============================ STATE / STORAGE ============================ */
-const KEY='hpo-tracker-v1'; const APP_VERSION='1.52';
+const KEY='hpo-tracker-v1'; const APP_VERSION='1.54';
 let S = {prog:'hpo',h:{days:{},m:1,d:1},l:{log:[],pain:null,area:null},ne:{days:{},d:1},ka:{days:{},d:1},free:[],run:{setup:null,log:{},w:1,races:[]},plan:'4',week:1,day:1,tab:'train',sessions:{},runs:{},tests:[],unit:'lb',startDate:null};
 let storageOK=false, saveT=null;
 async function load(){
@@ -877,17 +885,21 @@ function tmTick(){ if(!TM.on) return; TM.left--; if(TM.segs[TM.i].l!=='Get ready
   if(TM.left<=0){ const fin=TM.segs[TM.i]; if(fin.k==='work'&&TM.day){ tmCommit(); const p=tmPresc(fin.l); TM.pend={l:fin.l,p,i:TM.i}; }
     TM.i++; if(TM.i>=TM.segs.length){ TM.on=false; clearInterval(TM.iv); TM.iv=null; tmCue('finish'); tmVib([300,100,300,100,600]); toast('Time. Done.'); tmPaint(); return; }
     TM.left=TM.segs[TM.i].s; const k=TM.segs[TM.i].k; if(k==='work') tmCue('go'); else if(k==='rest') tmCue('rest'); else tmCue('end'); tmVib(k==='rest'?[150]:[200,80,200]); }
+  { const t=tmTempo(); if(t&&t.start&&TM.left>3) tmTone({u:880,h:660,d:440,r:330}[t.c]||660,70,0,0.18,'sine'); }
   tmPaint(); }
 function tmFinishLog(){ tmCommit(); render(); }
 function tmLogHtml(){ if(!TM.log.length&&!TM.pend) return ''; const agg={}; TM.log.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); });
   return `<div class="tmlog">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
 function tmPendHtml(){ const p=TM.pend; if(!p) return ''; const isMax=p.p==='max'; const isPlank=/plank|hold|sit\b/i.test(p.l);
   return `<div class="tmpend"><span>${esc(p.l)} — ${isPlank?'seconds held':'reps done'}?</span><input id="tm-reps" type="number" inputmode="numeric" placeholder="${typeof p.p==='number'?p.p:(isMax?'':'—')}" onchange="tmCommit();tmPaint()"><small>${typeof p.p==='number'?'blank = '+p.p+' (as prescribed)':isMax?'enter your number':'optional'}</small></div>`; }
+// ---- tempo prompt: a work segment with tp=[[label,sec,colour]...] shows UP 3-2-1 / HOLD 2-1 / DOWN 3-2-1 and the rep count
+function tmTempo(){ const seg=TM.segs[TM.i]; if(!seg||!seg.tp||seg.k!=='work'||TM.i>=TM.segs.length) return null; const cyc=seg.tp.reduce((a,p)=>a+p[1],0), e=Math.max(0,seg.s-TM.left); if(e>=seg.s) return null; const reps=Math.max(1,Math.round(seg.s/cyc)), rep=Math.min(reps,Math.floor(e/cyc)+1); let pos=e%cyc, pi=0; while(pos>=seg.tp[pi][1]){ pos-=seg.tp[pi][1]; pi++; } return {pi,name:seg.tp[pi][0],c:seg.tp[pi][2],left:seg.tp[pi][1]-pos,start:pos===0,rep,reps,tp:seg.tp}; }
+function tmTempoHtml(){ const t=tmTempo(); if(!t) return ''; return `<div class="tpbox ${t.c}"><span class="tpn">${t.name}</span><span class="tpc">${t.left}</span></div><div class="tpsteps">${t.tp.map((p,i)=>`<span class="${p[2]} ${i===t.pi?'on':''}">${p[0]} ${p[1]}</span>`).join('')}</div><div class="tprep">Rep ${t.rep} / ${t.reps}</div>`; }
 function tmWidget(segs,key,day){ const raw=segs; segs=tmWithSwitches(segs,key); const live=TM.key===key&&TM.segs.length; const hasSw=raw.some((a,i)=>{ const b=raw[i+1]; return b&&((a.k==='work'&&b.k==='work'&&a.l!==b.l)||(a.k==='warm'&&b.k==='work'&&!/^run/.test(String(key)))); }); const seg=live?TM.segs[Math.min(TM.i,TM.segs.length-1)]:segs[0]; const total=segs.reduce((a,x)=>a+x.s,0); const done=live&&TM.i>=TM.segs.length;
   const left=live?TM.left:seg.s, el=live?TM.el:0, rem=total-el, next=live&&TM.i+1<TM.segs.length?TM.segs[TM.i+1]:(!live&&segs[1]?segs[1]:null); const k=key;
   return `<div class="tmw ${live&&TM.on?'on':''} ${seg.k} ${done?'fin':''}" id="tmw-${k}">
    <div class="tmrow"><span>Elapsed</span><b id="tm-el-${k}">${fmtDur(el*1000)}</b></div>
-   <div class="tmmain"><div class="tmr" id="tm-r-${k}">${done?'Complete':esc(seg.r||'')}</div><div class="tmbig" id="tm-big-${k}">${done?'✓':fmtDur(left*1000)}</div><div class="tml" id="tm-l-${k}">${done?'Nice work.':esc(seg.l)}</div><div class="tmn" id="tm-n-${k}">${next?'Next: '+esc(next.l)+' · '+fmtDur(next.s*1000):''}</div></div>
+   <div class="tmmain"><div class="tmr" id="tm-r-${k}">${done?'Complete':esc(seg.r||'')}</div><div class="tmbig" id="tm-big-${k}">${done?'✓':fmtDur(left*1000)}</div><div class="tml" id="tm-l-${k}">${done?'Nice work.':esc(seg.l)}</div><div class="tmn" id="tm-n-${k}">${next?'Next: '+esc(next.l)+' · '+fmtDur(next.s*1000):''}</div><div class="tmtp" id="tm-tp-${k}">${live?tmTempoHtml():''}</div></div>
    <div class="tmrow"><span>Remaining</span><b id="tm-rem-${k}">${fmtDur(Math.max(0,rem)*1000)}</b></div>
    <div id="tm-pend-${k}">${live?tmPendHtml():''}</div><div id="tm-log-${k}">${live?tmLogHtml():''}</div>
    <div class="row" style="margin-top:8px"><button class="btn ${live&&TM.on?'':'done'}" id="tm-btn-${k}" style="margin:0;flex:1" onclick='tmToggle(${JSON.stringify(raw)},"${key}",${day||0})'>${live&&TM.on?'Pause':live&&TM.el?'Resume':'Start'}</button>${live?`<button class="btn ghost" style="margin:0" onclick="tmReset()">Reset</button>`:''}</div>
@@ -896,6 +908,7 @@ function tmWidget(segs,key,day){ const raw=segs; segs=tmWithSwitches(segs,key); 
   </div>`; }
 function tmPaint(){ const k=TM.key; const w=document.getElementById('tmw-'+k); if(!w) return; const seg=TM.segs[Math.min(TM.i,TM.segs.length-1)], done=TM.i>=TM.segs.length; const set=(id,v)=>{ const e=document.getElementById(id+'-'+k); if(e) e.textContent=v; };
   set('tm-el',fmtDur(TM.el*1000)); set('tm-rem',fmtDur(Math.max(0,TM.total-TM.el)*1000)); set('tm-big',done?'✓':fmtDur(TM.left*1000)); set('tm-r',done?'Complete':(seg.r||'')); set('tm-l',done?'Nice work.':seg.l); const nx=TM.i+1<TM.segs.length?TM.segs[TM.i+1]:null; set('tm-n',nx?'Next: '+nx.l+' · '+fmtDur(nx.s*1000):'');
+  const tpe=document.getElementById('tm-tp-'+k); if(tpe){ const th=tmTempoHtml(); if(tpe.innerHTML!==th) tpe.innerHTML=th; }
   const pe=document.getElementById('tm-pend-'+k); if(pe){ const cur=pe.dataset.i||''; const want=TM.pend?String(TM.pend.i):''; if(cur!==want){ pe.innerHTML=tmPendHtml(); pe.dataset.i=want; } }
   const lg=document.getElementById('tm-log-'+k); if(lg) lg.innerHTML=tmLogHtml();
   w.className='tmw '+(TM.on?'on ':'')+(done?'fin':seg.k); const bar=w.querySelector('.tmbar i'); if(bar) bar.style.width=Math.round(TM.el/TM.total*100)+'%'; const btn=document.getElementById('tm-btn-'+k); if(btn){ btn.textContent=TM.on?'Pause':TM.el?'Resume':'Start'; btn.className='btn '+(TM.on?'':'done'); if(!w.querySelector('.btn.ghost')&&TM.segs.length){ const b=document.createElement('button'); b.className='btn ghost'; b.style.margin='0'; b.textContent='Reset'; b.onclick=tmReset; btn.parentNode.appendChild(b); } }
@@ -1300,7 +1313,7 @@ function kaCycle(i){ const x=kaEnsure(S.ka.d); x.ov=x.ov||{}; const cur=x.ov[i]|
 function kaSet(f,v){ const x=kaEnsure(S.ka.d); x[f]=(f==='pt')?(v===''?'':+v):v; if(!x.date) x.date=new Date().toISOString(); save(); }
 function kaFinish(){ if(TM.key==='ka'+S.ka.d) tmCommit(); const x=kaEnsure(S.ka.d); x.done=!x.done; if(x.done){ if(TM.key==='ka'+S.ka.d&&TM.el>0) x.time=fmtDur(TM.el*1000); x.date=new Date().toISOString(); if(!x.scale) x.scale='rx'; toast(S.ka.d===42?'6 weeks. Bulletproof.':'Done — next day loaded'); save(); S.ka.d=kaNext(); render(); window.scrollTo(0,0); return; } save(); render(); }
 function kaMoveText(key,sc){ const m=KA_MOVES[key]; if(!m) return ''; return sc==='scaled'?m.s:sc==='rxp'?m.p:m.r; }
-function kaLine(line,i,scale,ov){ const [key,txt]=line; const sc=(ov&&ov[i])||scale; const mv=kaMoveText(key,sc); const gi=hInfoLines.push(mv)-1; return `<div class="hlrow"><button class="hl ${sc}" onclick="kaCycle(${i})"><span>${esc(txt)}<small class="nev">${esc(mv)}</small></span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button><button class="info" onclick="hInfo(${gi})" aria-label="what is this">?</button></div>`; }
+function kaLine(line,i,scale,ov){ let [key,txt]=line; const sc=(ov&&ov[i])||scale; const mv=kaMoveText(key,sc); if(tmIsSingle(mv)){ txt=txt.replace(/\s*—\s*both feet together/,' — each foot'); if(!/each|twice|left|right/i.test(txt)) txt+=' each side'; } const gi=hInfoLines.push(mv)-1; return `<div class="hlrow"><button class="hl ${sc}" onclick="kaCycle(${i})"><span>${esc(txt)}<small class="nev">${esc(mv)}</small></span><em>${sc==='rx'?'RX':sc==='rxp'?'RX+':'S'}</em></button><button class="info" onclick="hInfo(${gi})" aria-label="what is this">?</button></div>`; }
 function kaStrip(){ let h='<div class="weekstrip">'; for(let d=1;d<=42;d++){ if(d>1&&(d-1)%7===0) h+='<span class="ph"></span>'; const x=kaDay(d), day=KA_DAYS[d-1]; h+=`<button class="${d===S.ka.d?'cur':''} ${x?.done?'done':''} ${day.f==='reset'?'rest':''}" onclick="S.ka.d=${d};save();render()">${d}</button>`; } return h+'</div>'; }
 function kaPrev(d){ for(let k=d-1;k>=1;k--){ const x=kaDay(k); if(x&&x.sw!=null) return {d:k,x}; } return null; }
 function kaClearStreak(d){ let n=0; for(let k=d;k>=1;k--){ const x=kaDay(k); if(!x||x.sw==null) break; if(x.sw||x.gv) break; n++; } return n; }
@@ -1315,14 +1328,14 @@ function vKADay(){ hInfoLines=[];
   h+=`<div class="painbox ${v.c}"><div class="pb"><label>Swelling this morning?<span class="yn"><button class="${x.sw===false?'on':''}" onclick="kaMark('sw',false);kaMark('side','')">No</button><button class="${x.sw===true&&x.side==='L'?'onbad':''}" onclick="kaMark('sw',true);kaMark('side','L')">Left</button><button class="${x.sw===true&&x.side==='R'?'onbad':''}" onclick="kaMark('sw',true);kaMark('side','R')">Right</button><button class="${x.sw===true&&x.side==='B'?'onbad':''}" onclick="kaMark('sw',true);kaMark('side','B')">Both</button></span></label><label>Heel / arch pain this morning?<span class="yn"><button class="${x.hp===0?'on':''}" onclick="kaMark('hp',0)">None</button><button class="${x.hp===1?'onwarn':''}" onclick="kaMark('hp',1)">Mild</button><button class="${x.hp===2?'onbad':''}" onclick="kaMark('hp',2)">Bad</button></span></label><label>Catching / giving way?<span class="yn"><button class="${x.gv===false?'on':''}" onclick="kaMark('gv',false)">No</button><button class="${x.gv===true?'onbad':''}" onclick="kaMark('gv',true)">Yes</button></span></label></div><p>${esc(v.t)}</p>${(x.sw||x.gv)&&day.k!=='M'?`<button class="btn ghost" style="margin-top:8px" onclick="kaSwapMotion()">Switch today to Motion + Flush</button>`:''}</div>`;
   h+=kaPhotoBlock(d,x);
   { const fx=x.feet||{}; const loadDay=d%2===1; h+=`<details class="prep" ${fx.open||x.hp?'open':''} ontoggle="kaEnsure(${d}).feet=Object.assign(kaEnsure(${d}).feet||{},{open:this.open});save()"><summary>Feet — ${esc(KA_FEET_AM.t)}${loadDay?' + plantar loading':''} <span style="color:var(--ink2);font-weight:600">${fx.am?'✓':''}${fx.load?' ✓ load':''}</span></summary>`;
-    h+=`<div class="ex"><h3 style="font-size:17px">${esc(KA_FEET_AM.t)}</h3><div class="sub"><span>${esc(KA_FEET_AM.fmt)}</span></div>`; let fi=500; KA_FEET_AM.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=kaLine(line,fi++,scale,x.ov); }); h+='</div>'; }); h+=`</div>`+tmWidget(KA_FEET_AM.tm(),'kaf'+d,0)+`<button class="btn ghost" onclick="kaEnsure(${d}).feet=Object.assign(kaEnsure(${d}).feet||{},{am:!${!!fx.am}});save();render()">${fx.am?'✓ Morning routine done':'Mark morning routine done'}</button>`;
-    if(loadDay){ h+=`<div class="ex" style="margin-top:10px"><h3 style="font-size:17px">${esc(KA_FEET_LOAD.t)}</h3><div class="sub"><span>${esc(KA_FEET_LOAD.fmt)}</span></div>`; KA_FEET_LOAD.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=kaLine(line,fi++,scale,x.ov); }); h+='</div>'; }); h+=`</div>`+tmWidget(KA_FEET_LOAD.tm(),'kafl'+d,0)+`<button class="btn ghost" onclick="kaEnsure(${d}).feet=Object.assign(kaEnsure(${d}).feet||{},{load:!${!!fx.load}});save();render()">${fx.load?'✓ Plantar loading done':'Mark plantar loading done'}</button>`; }
+    h+=`<div class="ex"><h3 style="font-size:17px">${esc(KA_FEET_AM.t)}</h3><div class="sub"><span>${esc(KA_FEET_AM.fmt)}</span></div>`; let fi=500; KA_FEET_AM.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=kaLine(line,fi++,scale,x.ov); }); h+='</div>'; }); h+=`</div>`+tmWidget(tmSided(KA_FEET_AM.tm(),KA_FEET_AM.b.reduce((a,b)=>a.concat(b.lines),[]),500,kaMoveText,scale,x.ov),'kaf'+d,0)+`<button class="btn ghost" onclick="kaEnsure(${d}).feet=Object.assign(kaEnsure(${d}).feet||{},{am:!${!!fx.am}});save();render()">${fx.am?'✓ Morning routine done':'Mark morning routine done'}</button>`;
+    if(loadDay){ h+=`<div class="ex" style="margin-top:10px"><h3 style="font-size:17px">${esc(KA_FEET_LOAD.t)}</h3><div class="sub"><span>${esc(KA_FEET_LOAD.fmt)}</span></div>`; KA_FEET_LOAD.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=kaLine(line,fi++,scale,x.ov); }); h+='</div>'; }); h+=`</div>`+tmWidget(tmSided(KA_FEET_LOAD.tm(),KA_FEET_LOAD.b.reduce((a,b)=>a.concat(b.lines),[]),503,kaMoveText,scale,x.ov),'kafl'+d,0)+`<button class="btn ghost" onclick="kaEnsure(${d}).feet=Object.assign(kaEnsure(${d}).feet||{},{load:!${!!fx.load}});save();render()">${fx.load?'✓ Plantar loading done':'Mark plantar loading done'}</button>`; }
     h+=`<ul class="help" style="margin-top:10px">${KA_FEET_RULES.map(r=>`<li>${esc(r)}</li>`).join('')}</ul></details>`; }
   h+=`<div class="ex"><h3>${esc(day.t)}</h3><div class="sub"><span>${esc(day.fmt)}</span><span class="pr">${KA_FOCUS[day.f]}</span></div>`;
   h+=`<div class="chips">${SCALES.map(([k,l])=>`<button class="chip ${scale===k?'on':''}" onclick="kaSetScale('${k}')">${l}</button>`).join('')}<span style="font-size:12px;color:var(--ink2);align-self:center">tap a line to change one movement</span></div>`;
   let i=0; day.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=kaLine(line,i,scale,x.ov); i++; }); h+='</div>'; });
   h+=`</div>`;
-  h+=tmWidget(KA_T[day.k].tm(),'ka'+d,0);
+  h+=tmWidget(tmSided(KA_T[day.k].tm(),day.b.reduce((a,b)=>a.concat(b.lines),[]),0,kaMoveText,scale,x.ov),'ka'+d,0);
   if(x.alt) h+=`<p class="help">Swapped to Motion + Flush for today. <button class="segbtn" onclick="delete kaEnsure(${d}).alt;save();render()">Undo</button></p>`;
   h+=`<div class="hlog"><div><label>Pain during (0-10, cap 2)</label><input type="number" inputmode="numeric" min="0" max="10" value="${x.pt??''}" onchange="kaSet('pt',this.value)"></div><div><label>Load used (backpack, band)</label><input placeholder="e.g. 10 lb, green" value="${esc(x.load||'')}" onchange="kaSet('load',this.value)"></div></div>`;
   h+=`<textarea class="notes" placeholder="Which knee / ankle, what hurt, what felt good" onchange="kaSet('notes',this.value)">${esc(x.notes||'')}</textarea>`;
@@ -1380,7 +1393,7 @@ function vNEDay(){ hInfoLines=[];
   if(hasPull) h+=`<div class="chips"><button class="chip ${S.ne.noPull?'on':''}" onclick="S.ne.noPull=!S.ne.noPull;save();render()">No bar / no table</button><span style="font-size:12px;color:var(--ink2);align-self:center">${S.ne.noPull?'using doorframe rows':'rows need a table or towel over a door'}</span></div>${S.ne.noPull?`<p class="help" style="margin:2px 0 8px">${esc(NE_PULL_HELP)}</p>`:''}`;
   let i=0; day.b.forEach(blk=>{ h+=`<div class="hblk"><div class="hh">${esc(blk.h)}</div>`; blk.lines.forEach(line=>{ h+=neLine(line,typeof line==='string'?-1:i,scale,x.ov); if(typeof line!=='string') i++; }); h+='</div>'; });
   h+=`</div>`;
-  h+=tmWidget(NE_TIMERS[d-1],'ne'+d,d);
+  h+=tmWidget(tmSided(NE_TIMERS[d-1],day.b.reduce((a,b)=>a.concat(b.lines),[]),0,neMoveText,scale,x.ov,true),'ne'+d,d);
   if(x.reps&&x.reps.length&&TM.key!=='ne'+d){ const agg={}; x.reps.forEach(e=>{ agg[e.l]=agg[e.l]||{n:0,r:0}; agg[e.l].n++; agg[e.l].r+=(e.r||0); }); h+=`<div class="tmlog saved">${Object.keys(agg).map(l=>`<span>${esc(l)}<b>${agg[l].r}${agg[l].n>1?' <small>('+agg[l].n+' sets)</small>':''}</b></span>`).join('')}</div>`; }
   if(day.test){ const t=x.test||{}; const b=neDay(1)?.test||{};
     h+=`<div class="netest">${[['pushup','Push ups'],['squat','Squats'],['pull','Rows / pull ups'],['plank','Plank (sec)']].map(([k,l])=>`<label><span>${l}${d===30&&b[k]!=null&&b[k]!==''?`<i>Day 1: ${b[k]}</i>`:''}</span><input type="number" inputmode="numeric" value="${t[k]??''}" onchange="neSetTest('${k}',this.value)"></label>`).join('')}</div>`; }
